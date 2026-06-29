@@ -1,0 +1,44 @@
+{
+  "Global": {
+    "title": "ESEN Graduation Ceremony 2026",
+    "description": "The official digital experience for the ESEN Graduation Ceremony 2026. Celebrating the Class of 2026 at UTICA on 9 July 2026.",
+    "tagline": "Shaping the Future, Powered by Innovation",
+    "classOf": "Class of 2026"
+  },
+  "seating": {
+    "title": "Find Your Seat",
+    "eyebrow": "UTICA · 9 JULY 2026",
+    "filter": { "all": "All Zones" },
+    "mobile": { "hint": "← Scroll to explore the full map →" }
+  },
+  "rsvp": {
+    "title": "Confirm Your Attendance",
+    "field": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "classe": "Your Class",
+      "specialty": "Your Specialty",
+      "guestCount": "How many people are you bringing with you?",
+      "guestCountSub": "(NB: MAX 3 people)"
+    },
+    "placeholder": {
+      "firstName": "Your first name",
+      "lastName": "Your last name",
+      "email": "you@example.com",
+      "phone": "+216 XX XXX XXX",
+      "classe": "Class",
+      "specialty": "Specialty",
+      "guestCount": "0"
+    },
+    "button": {
+      "submit": "Confirm My Attendance",
+      "submitting": "Submitting..."
+    },
+    "success": {
+      "title": "Place Confirmed",
+      "body": "Check your inbox – your QR code has been sent."
+    }
+  }
+}

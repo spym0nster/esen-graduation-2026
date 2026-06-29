@@ -1,0 +1,44 @@
+{
+  "Global": {
+    "title": "Cérémonie de Remise des Diplômes ESEN 2026",
+    "description": "L'expérience numérique officielle pour la Cérémonie de Remise des Diplômes ESEN 2026. Célébration de la Promotion 2026 à l'UTICA le 9 Juillet 2026.",
+    "tagline": "Façonner l'Avenir, Propulsé par l'Innovation",
+    "classOf": "Promotion 2026"
+  },
+  "seating": {
+    "title": "Find Your Seat",
+    "eyebrow": "UTICA · 9 JULY 2026",
+    "filter": { "all": "All Zones" },
+    "mobile": { "hint": "← Scroll to explore the full map →" }
+  },
+  "rsvp": {
+    "title": "Confirmez votre présence",
+    "field": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "E‑mail",
+      "phone": "Numéro de téléphone",
+      "classe": "Votre classe",
+      "specialty": "Votre spécialité",
+      "guestCount": "Tu vas ramener combien de personnes avec toi ?",
+      "guestCountSub": "(NB: MAX 3 personnes)"
+    },
+    "placeholder": {
+      "firstName": "Votre prénom",
+      "lastName": "Votre nom",
+      "email": "votre@email.com",
+      "phone": "+216 XX XXX XXX",
+      "classe": "Classe",
+      "specialty": "Spécialité",
+      "guestCount": "0"
+    },
+    "button": {
+      "submit": "Confirmer ma présence",
+      "submitting": "Envoi en cours..."
+    },
+    "success": {
+      "title": "Place confirmée",
+      "body": "Vérifiez votre boîte mail – votre QR code a été envoyé."
+    }
+  }
+}
