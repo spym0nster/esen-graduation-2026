@@ -60,8 +60,8 @@ export function validateRSVP(data: Partial<RSVPEntry>): { isValid: boolean; erro
     errors.specialty = "Spécialité invalide";
   }
 
-  if (data.guestCount === undefined || data.guestCount < 0 || data.guestCount > 2) {
-    errors.guestCount = "Nombre d'invités invalide (0-2 max)";
+  if (data.guestCount === undefined || data.guestCount < 0 || data.guestCount > 3) {
+    errors.guestCount = "Nombre d'invités invalide (0-3 max)";
   }
 
   return {

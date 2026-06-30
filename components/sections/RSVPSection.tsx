@@ -224,10 +224,10 @@ export function RSVPSection() {
                       {t("field.guestCount", { default: "Tu vas ramener combien de personnes avec toi ?" })}
                       {requiredAsterisk}
                       <br/>
-                      <span className="text-[10px] text-[#F0B429] opacity-70 tracking-normal normal-case">{t("field.guestCountSub", { default: "(NB: MAX 2 personnes)" })}</span>
+                      <span className="text-[10px] text-[#F0B429] opacity-70 tracking-normal normal-case">{t("field.guestCountSub", { default: "(NB: MAX 3 personnes)" })}</span>
                     </label>
                     <select name="guestCount" value={formData.guestCount} onChange={handleChange} className={getFieldClass("guestCount")} style={selectArrowStyle}>
-                      {[0,1,2].map(n => <option key={n} value={n} className="bg-[#1A1410]">{n}</option>)}
+                      {[0,1,2,3].map(n => <option key={n} value={n} className="bg-[#1A1410]">{n}</option>)}
                     </select>
                     <ErrorMsg msg={errors.guestCount} />
                   </div>
