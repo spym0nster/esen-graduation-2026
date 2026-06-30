@@ -47,7 +47,14 @@ export function CommitteeSection() {
                 visible: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any } }
               }}
             >
-              <PersonCard name={member.name} role={member.role} imageUrl={member.imageUrl} size="medium" />
+              <PersonCard
+                name={member.name}
+                role={member.role}
+                imageUrl={member.imageUrl}
+                size="medium"
+                imagePosition={(member as any).imagePosition}
+                imageSizeOffset={(member as any).imageSizeOffset}
+              />
             </motion.div>
           ))}
         </motion.div>
