@@ -1,74 +1,53 @@
-import { google } from "googleapis";
+import { getGoogleAccessToken } from './google-auth';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
-const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
-
-function getPrivateKey(): string {
-  let key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || "";
-  key = key.trim();
-
-  if (key.startsWith("\"") && key.endsWith("\"")) {
-    key = key.slice(1, -1);
-  }
-
-  key = key.replace(/\\n/g, "\n");
-
-  if (
-    !key.includes("-----BEGIN PRIVATE KEY-----") ||
-    !key.includes("-----END PRIVATE KEY-----")
-  ) {
-    console.error(
-      "[GoogleAuth] Invalid key format. First 50 chars:",
-      key.substring(0, 50)
-    );
-    console.error("[GoogleAuth] Key length:", key.length);
-    throw new Error(
-      "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is malformed — missing BEGIN/END markers"
-    );
-  }
-
-  return key;
-}
-
-async function createAuth() {
-  try {
-    const auth = new google.auth.JWT({
-      email: CLIENT_EMAIL,
-      key: getPrivateKey(),
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    await auth.authorize();
-    return auth;
-  } catch (err) {
-    console.error("[GoogleAuth] Authorization failed:", err);
-    throw err;
-  }
-}
-
-async function getSheets() {
-  const auth = await createAuth();
-  return google.sheets({ version: "v4", auth });
-}
 
 /** Read all rows from a sheet tab. Row 0 is the header. */
 export async function sheetGetRows(sheetName: string): Promise<string[][]> {
-  const sheets = await getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: `${sheetName}!A:N`,
-  });
-  return (res.data.values || []) as string[][];
+  const accessToken = await getGoogleAccessToken();
+
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:N`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('[Sheets] Read failed:', errText);
+    throw new Error('Failed to read from Google Sheet');
+  }
+
+  const data = await response.json();
+  return (data.values || []) as string[][];
 }
 
 /** Append a single row to the sheet. */
 export async function sheetAppendRow(sheetName: string, row: string[]): Promise<void> {
-  const sheets = await getSheets();
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: SHEET_ID,
-    range: `${sheetName}!A:A`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [row] },
-  });
+  const accessToken = await getGoogleAccessToken();
+
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:Z:append?valueInputOption=USER_ENTERED`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values: [row] }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('[Sheets] Append failed:', errText);
+    throw new Error('Failed to append to Google Sheet');
+  }
 }
 
 /** Update a specific row by its 1-based sheet row number. */
@@ -77,25 +56,59 @@ export async function sheetUpdateRow(
   rowNumber: number,
   row: string[]
 ): Promise<void> {
-  const sheets = await getSheets();
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SHEET_ID,
-    range: `${sheetName}!A${rowNumber}:N${rowNumber}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [row] },
-  });
+  const accessToken = await getGoogleAccessToken();
+
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A${rowNumber}:N${rowNumber}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values: [row] }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('[Sheets] Update failed:', errText);
+    throw new Error('Failed to update Google Sheet');
+  }
 }
 
 /** Delete one or more rows by their 1-based sheet row numbers. */
 export async function sheetDeleteRows(sheetName: string, rowNumbers: number[]): Promise<void> {
   if (rowNumbers.length === 0) return;
-  const sheets = await getSheets();
 
-  // Fetch the internal sheetId (not the same as the spreadsheet ID)
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-  const sheet = meta.data.sheets?.find((s) => s.properties?.title === sheetName);
+  const accessToken = await getGoogleAccessToken();
+
+  // First, get the sheet metadata to find the sheetId
+  const metaResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!metaResponse.ok) {
+    const errText = await metaResponse.text();
+    console.error('[Sheets] Metadata fetch failed:', errText);
+    throw new Error('Failed to fetch sheet metadata');
+  }
+
+  const metaData = await metaResponse.json();
+  const sheet = metaData.sheets?.find((s: any) => s.properties?.title === sheetName);
   const sheetId = sheet?.properties?.sheetId;
-  if (sheetId === undefined || sheetId === null) return;
+
+  if (sheetId === undefined || sheetId === null) {
+    console.error(`[Sheets] Sheet "${sheetName}" not found`);
+    return;
+  }
 
   // Sort descending so indices don't shift as we delete
   const sorted = [...rowNumbers].sort((a, b) => b - a);
@@ -104,15 +117,29 @@ export async function sheetDeleteRows(sheetName: string, rowNumbers: number[]): 
     deleteDimension: {
       range: {
         sheetId,
-        dimension: "ROWS" as const,
+        dimension: 'ROWS',
         startIndex: rowNum - 1, // 0-based (inclusive)
         endIndex: rowNum,       // 0-based (exclusive)
       },
     },
   }));
 
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId: SHEET_ID,
-    requestBody: { requests },
-  });
+  const batchResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ requests }),
+    }
+  );
+
+  if (!batchResponse.ok) {
+    const errText = await batchResponse.text();
+    console.error('[Sheets] Delete failed:', errText);
+    throw new Error('Failed to delete rows from Google Sheet');
+  }
 }
+
