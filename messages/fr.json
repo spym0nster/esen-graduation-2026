@@ -5,6 +5,14 @@
     "tagline": "Façonner l'Avenir, Propulsé par l'Innovation",
     "classOf": "Promotion 2026"
   },
+  "countdown": {
+    "eyebrow": "LE COMPTE À REBOURS",
+    "title": "Le Grand Jour Approche",
+    "days": "Jours",
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "seconds": "Secondes"
+  },
   "seating": {
     "title": "Find Your Seat",
     "eyebrow": "UTICA · 9 JULY 2026",

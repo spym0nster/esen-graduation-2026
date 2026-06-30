@@ -5,6 +5,8 @@ import { sendEmail } from "@/lib/emailService";
 import { cookies } from "next/headers";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
 
+export const runtime = 'nodejs';
+
 async function isAuthed() {
   const cookieStore = await cookies();
   return cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSCODE;

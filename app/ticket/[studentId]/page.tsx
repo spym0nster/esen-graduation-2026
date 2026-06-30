@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import QRCode from "qrcode";
 import { getStudentById } from "@/lib/rsvpService";
+
+export const runtime = 'nodejs';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation.vercel.app";
 
@@ -152,12 +155,12 @@ export default async function StudentTicketPage({
             border: "2px solid #E8EEFF",
             textAlign: "center",
           }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={qrDataUrl}
               width={220}
               height={220}
               alt="QR Code"
+              unoptimized
               style={{ display: "block", margin: "0 auto", borderRadius: "8px" }}
             />
           </div>

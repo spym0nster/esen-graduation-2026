@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { IntroSequence } from "@/components/ui/IntroSequence";
 import { HeroSection } from "@/components/sections/HeroSection";
+import { CountdownSection } from "@/components/sections/CountdownSection";
 import { ProgrammeSection } from "@/components/sections/ProgrammeSection";
 import { MajorsSection } from "@/components/sections/MajorsSection";
 import { ModeratorsSection } from "@/components/sections/ModeratorsSection";
@@ -19,6 +20,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#0D0B0E]">
       <IntroSequence onComplete={() => setIntroComplete(true)} />
       <HeroSection introComplete={introComplete} />
+      <CountdownSection />
       <ProgrammeSection />
 <MajorsSection />
 <ModeratorsSection />

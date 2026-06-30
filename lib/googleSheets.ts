@@ -2,23 +2,57 @@ import { google } from "googleapis";
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 const CLIENT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
-// dotenv stores \n as literal \\n — restore real newlines for the JWT library
-const PRIVATE_KEY = (process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
-function getSheets() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: CLIENT_EMAIL,
-      private_key: PRIVATE_KEY,
-    },
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+function getPrivateKey(): string {
+  let key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || "";
+  key = key.trim();
+
+  if (key.startsWith("\"") && key.endsWith("\"")) {
+    key = key.slice(1, -1);
+  }
+
+  key = key.replace(/\\n/g, "\n");
+
+  if (
+    !key.includes("-----BEGIN PRIVATE KEY-----") ||
+    !key.includes("-----END PRIVATE KEY-----")
+  ) {
+    console.error(
+      "[GoogleAuth] Invalid key format. First 50 chars:",
+      key.substring(0, 50)
+    );
+    console.error("[GoogleAuth] Key length:", key.length);
+    throw new Error(
+      "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is malformed — missing BEGIN/END markers"
+    );
+  }
+
+  return key;
+}
+
+async function createAuth() {
+  try {
+    const auth = new google.auth.JWT({
+      email: CLIENT_EMAIL,
+      key: getPrivateKey(),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    await auth.authorize();
+    return auth;
+  } catch (err) {
+    console.error("[GoogleAuth] Authorization failed:", err);
+    throw err;
+  }
+}
+
+async function getSheets() {
+  const auth = await createAuth();
   return google.sheets({ version: "v4", auth });
 }
 
 /** Read all rows from a sheet tab. Row 0 is the header. */
 export async function sheetGetRows(sheetName: string): Promise<string[][]> {
-  const sheets = getSheets();
+  const sheets = await getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: `${sheetName}!A:N`,
@@ -28,7 +62,7 @@ export async function sheetGetRows(sheetName: string): Promise<string[][]> {
 
 /** Append a single row to the sheet. */
 export async function sheetAppendRow(sheetName: string, row: string[]): Promise<void> {
-  const sheets = getSheets();
+  const sheets = await getSheets();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
     range: `${sheetName}!A:A`,
@@ -43,7 +77,7 @@ export async function sheetUpdateRow(
   rowNumber: number,
   row: string[]
 ): Promise<void> {
-  const sheets = getSheets();
+  const sheets = await getSheets();
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
     range: `${sheetName}!A${rowNumber}:N${rowNumber}`,
@@ -55,7 +89,7 @@ export async function sheetUpdateRow(
 /** Delete one or more rows by their 1-based sheet row numbers. */
 export async function sheetDeleteRows(sheetName: string, rowNumbers: number[]): Promise<void> {
   if (rowNumbers.length === 0) return;
-  const sheets = getSheets();
+  const sheets = await getSheets();
 
   // Fetch the internal sheetId (not the same as the spreadsheet ID)
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });

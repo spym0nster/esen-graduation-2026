@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStudentByQrId, getGuestByQrId, updateStudent, updateGuest } from "@/lib/rsvpService";
 
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const { token } = await req.json();

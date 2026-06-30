@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { majors } from "../../data/majors";
 import { GlassCard } from "../ui/GlassCard";
+import { ProfileImage } from "../ui/OptimizedImage";
 
 export function MajorsSection() {
   return (
@@ -41,9 +42,11 @@ export function MajorsSection() {
             >
               <GlassCard className="h-full p-8 flex flex-col items-center justify-center text-center transition-all duration-300 group-hover:-translate-y-2 relative overflow-hidden">
                 {(major as any).imageUrl && (
-                  <div 
-                    className="w-[100px] h-[100px] mb-5 rounded-full bg-cover bg-center border-2 border-[#C9960C] shadow-[0_0_15px_rgba(201,150,12,0.3)]" 
-                    style={{ backgroundImage: `url('${(major as any).imageUrl}')` }} 
+                  <ProfileImage
+                    src={(major as any).imageUrl}
+                    alt={major.name}
+                    size={100}
+                    className="mb-5 rounded-full border-2 border-[#C9960C] shadow-[0_0_15px_rgba(201,150,12,0.3)]"
                   />
                 )}
                 <h3 className="font-serif text-[clamp(22px,2.5vw,28px)] text-[#E8E0D0] mb-2 leading-tight">

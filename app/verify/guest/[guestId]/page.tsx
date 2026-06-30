@@ -1,6 +1,8 @@
 import { getGuestByQrId, updateGuest } from "@/lib/rsvpService";
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 
+export const runtime = 'nodejs';
+
 export default async function GuestVerifyPage({ params }: { params: { guestId: string } }) {
   const guest = await getGuestByQrId(params.guestId);
 

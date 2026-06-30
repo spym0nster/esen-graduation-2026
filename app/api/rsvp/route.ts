@@ -7,6 +7,8 @@ import { sendEmail } from "@/lib/emailService";
 import { getStudentByEmail, saveStudent, saveGuest, updateStudent } from "@/lib/rsvpService";
 import { generateTicketPDF } from "@/lib/pdfGenerator";
 
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

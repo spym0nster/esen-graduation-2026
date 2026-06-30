@@ -1,6 +1,6 @@
 export const committee = [
-  { id: 1, name: "Bilel Triki", role: "President", imageUrl: "/images/committee/bilel triki.jpg" },
-  { id: 2, name: "Nour Gaddes", role: "Chef Marketing & Sponsoring", imageUrl: "/images/committee/nour gaddes.jpg" },
-  { id: 3, name: "Amenallah Ibrahmi", role: "Chef Media", imageUrl: "/images/committee/amenallah ibrahmi.jpg" },
-  { id: 4, name: "Ismail Ammar", role: "Chef Logistic", imageUrl: "/images/committee/ismail ammar.jpg" }
+  { id: 1, name: "Bilel Triki", role: "President", imageUrl: "/images/committee/bilel triki.webp" },
+  { id: 2, name: "Nour Gaddes", role: "Chef Marketing & Sponsoring", imageUrl: "/images/committee/nour gaddes.webp" },
+  { id: 3, name: "Amenallah Ibrahmi", role: "Chef Media", imageUrl: "/images/committee/amenallah ibrahmi.webp" },
+  { id: 4, name: "Ismail Ammar", role: "Chef Logistic", imageUrl: "/images/committee/ismail ammar.webp" }
 ];

@@ -3,6 +3,8 @@ import { getAllStudents } from "@/lib/rsvpService";
 import * as XLSX from "xlsx";
 import { cookies } from "next/headers";
 
+export const runtime = 'nodejs';
+
 async function isAuthed() {
   const cookieStore = await cookies();
   return cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSCODE;

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { motion, useScroll } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { GoldButton } from "../ui/GoldButton";
 import { ParticleField } from "../ui/ParticleField";
+import { HERO_IMAGE } from "@/lib/images";
 
 export function HeroSection({ introComplete }: { introComplete: boolean }) {
   const t = useTranslations("Global");
@@ -37,15 +39,25 @@ export function HeroSection({ introComplete }: { introComplete: boolean }) {
   return (
     <section className="relative h-screen w-full flex flex-col items-center justify-center overflow-hidden">
       {/* Background image */}
-      <motion.div
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/background.jpg')",
-          backgroundColor: "#1A1410",
-        }}
-        animate={{ scale: [1, 1.1] }}
-        transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
-      />
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <motion.div
+          className="absolute inset-0"
+          animate={{ scale: [1, 1.1] }}
+          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
+        >
+          <Image
+            src={HERO_IMAGE}
+            alt=""
+            width={2560}
+            height={1707}
+            priority
+            quality={85}
+            sizes="100vw"
+            className="h-full w-full object-cover object-center"
+            style={{ backgroundColor: "#1A1410" }}
+          />
+        </motion.div>
+      </div>
 
       {/* Warm brown overlay */}
       <div className="absolute inset-0 z-0 bg-[var(--color-overlay)]" />

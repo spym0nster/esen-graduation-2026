@@ -1,6 +1,8 @@
 import { getStudentByQrId, updateStudent } from "@/lib/rsvpService";
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 
+export const runtime = 'nodejs';
+
 export default async function VerifyPage({ params }: { params: { id: string } }) {
   const student = await getStudentByQrId(params.id);
 

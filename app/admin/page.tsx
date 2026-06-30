@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 
 interface Student {
   id: string;
@@ -413,14 +414,14 @@ export default function AdminPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 <div style={{ textAlign: "center" }}>
                   <div style={{ fontSize: 11, letterSpacing: 3, color: "#1B3A8C", fontWeight: 700, marginBottom: 12 }}>STUDENT TICKET</div>
-                  <img src={modalQRs.studentQR} width={200} height={200} alt="Student QR" style={{ borderRadius: 8 }} />
+                  <Image src={modalQRs.studentQR} width={200} height={200} alt="Student QR" unoptimized style={{ borderRadius: 8 }} />
                 </div>
                 {modalQRs.guestQRs.map((qr, i) => (
                   <div key={i} style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 11, letterSpacing: 3, color: "#B8860B", fontWeight: 700, marginBottom: 12 }}>
                       GUEST TICKET #{i + 1}
                     </div>
-                    <img src={qr} width={200} height={200} alt={`Guest QR ${i + 1}`} style={{ borderRadius: 8 }} />
+                    <Image src={qr} width={200} height={200} alt={`Guest QR ${i + 1}`} unoptimized style={{ borderRadius: 8 }} />
                   </div>
                 ))}
               </div>
