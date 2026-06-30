@@ -25,7 +25,7 @@ export default function ScannerPage() {
           scanningRef.current = false;
 
           let id = decodedText;
-          const match = decodedText.match(/\/verify\/(?:guest\/)?([a-f0-9-]+)/);
+          const match = decodedText.match(/\/verify\/(?:guest|student)\/([a-f0-9-]+)/);
           if (match) id = match[1];
 
           try {

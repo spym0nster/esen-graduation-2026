@@ -3,10 +3,20 @@ import { NextResponse } from 'next/server';
 import { getStudentByQrId, getGuestById, updateStudent, markGuestScanned } from '@/lib/rsvpService';
 
 export async function POST(req: Request) {
-  const { id } = await req.json();
+  const body = await req.json();
+  let { id } = body;
+  console.log('[Scanner] Looking up ID:', id);
+
+  const match = String(id || '').match(/\/verify\/(?:guest|student)\/([a-f0-9-]+)/);
+  if (match) {
+    id = match[1];
+    console.log('[Scanner] Normalized ID from URL to:', id);
+  }
+
   if (!id) return NextResponse.json({ status: 'invalid' });
 
   const student = await getStudentByQrId(id);
+  console.log('[Scanner] Student lookup result:', student);
   if (student) {
     if (student.scanned) {
       return NextResponse.json({
