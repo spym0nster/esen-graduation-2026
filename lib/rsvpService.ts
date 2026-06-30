@@ -15,8 +15,8 @@ const S = {
 
 // Guests tab
 const G = {
-  id: 0, guestIndex: 1, parentId: 2, parentName: 3,
-  classe: 4, specialty: 5, scanned: 6, scannedAt: 7, qrId: 8,
+  guestId: 0, parentId: 1, parentName: 2, guestIndex: 3,
+  scanned: 4, scannedAt: 5,
 } as const;
 
 const STUDENT_HEADERS = [
@@ -26,8 +26,8 @@ const STUDENT_HEADERS = [
 ];
 
 const GUEST_HEADERS = [
-  "id", "guestIndex", "parentId", "parentName",
-  "classe", "specialty", "scanned", "scannedAt", "qrId",
+  "guestId", "parentId", "parentName", "guestIndex",
+  "scanned", "scannedAt",
 ];
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
@@ -98,26 +98,27 @@ function studentToRow(s: StoredStudent): string[] {
 
 function rowToGuest(row: string[], rowIndex: number): StoredGuest {
   return {
-    id:          row[G.id]         || "",
+    id:          row[G.guestId] || "",
     guestIndex:  parseInt(row[G.guestIndex] || "1", 10),
-    parentId:    row[G.parentId]   || "",
+    parentId:    row[G.parentId] || "",
     parentName:  row[G.parentName] || "",
-    classe:      row[G.classe]     || "",
-    specialty:   row[G.specialty]  || "",
+    classe:      "",
+    specialty:   "",
     scanned:     row[G.scanned] === "TRUE",
     scannedAt:   row[G.scannedAt] || null,
-    qrId:        row[G.qrId] || row[G.id] || "",
+    qrId:        row[G.guestId] || "",
     _rowIndex:   rowIndex,
   };
 }
 
 function guestToRow(g: StoredGuest): string[] {
   return [
-    g.id, String(g.guestIndex), g.parentId, g.parentName,
-    g.classe, g.specialty,
+    g.id,
+    g.parentId,
+    g.parentName,
+    String(g.guestIndex),
     g.scanned ? "TRUE" : "FALSE",
     g.scannedAt || "",
-    g.qrId || g.id,
   ];
 }
 
@@ -182,16 +183,28 @@ export async function updateStudent(student: StoredStudent): Promise<void> {
 // ─── Guest CRUD ────────────────────────────────────────────────────────────────
 export async function getGuestById(id: string): Promise<StoredGuest | null> {
   const rows = await sheetGetRows("Guests");
-  const idx = rows.findIndex((row, i) => i > 0 && row[G.id] === id);
+  const idx = rows.findIndex((row, i) => i > 0 && row[G.guestId] === id);
   if (idx === -1) return null;
   return rowToGuest(rows[idx], idx + 1);
 }
 
 export async function getGuestByQrId(qrId: string): Promise<StoredGuest | null> {
-  const rows = await sheetGetRows("Guests");
-  const idx = rows.findIndex((row, i) => i > 0 && row[G.qrId] === qrId);
-  if (idx === -1) return null;
-  return rowToGuest(rows[idx], idx + 1);
+  return getGuestById(qrId);
+}
+
+export async function markGuestScanned(id: string): Promise<StoredGuest | null> {
+  const guest = await getGuestById(id);
+  if (!guest) return null;
+
+  const scannedAt = new Date().toISOString();
+  const updatedGuest = {
+    ...guest,
+    scanned: true,
+    scannedAt,
+  };
+
+  await sheetUpdateRow("Guests", guest._rowIndex!, guestToRow(updatedGuest));
+  return updatedGuest;
 }
 
 export async function saveGuest(guest: StoredGuest): Promise<void> {
@@ -242,7 +255,7 @@ export async function deleteStudent(studentId: string): Promise<void> {
   const guestRowIndices = guestRows
     .map((row, i) => ({ row, sheetRow: i + 1 }))
     .filter(({ row, sheetRow }) =>
-      sheetRow > 1 && (student.guestIds || []).includes(row[G.id])
+      sheetRow > 1 && (student.guestIds || []).includes(row[G.guestId])
     )
     .map(({ sheetRow }) => sheetRow);
 

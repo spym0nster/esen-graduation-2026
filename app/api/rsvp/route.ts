@@ -4,8 +4,9 @@ import QRCode from "qrcode";
 import { validateRSVP, RSVPEntry } from "@/lib/rsvp";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
 import { sendEmail } from "@/lib/emailService";
-import { getStudentByEmail, saveStudent, saveGuest, updateStudent } from "@/lib/rsvpService";
+import { getStudentByEmail, saveStudent, updateStudent } from "@/lib/rsvpService";
 import { generateTicketPDF } from "@/lib/pdfGenerator";
+import { appendGuestRows } from "@/lib/googleSheets";
 
 export const runtime = 'nodejs';
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     const studentId = uuidv4();
     const studentQrId = uuidv4();
     const guestIds = Array.from({ length: guestCount }, () => uuidv4());
-    const guestQrIds = Array.from({ length: guestCount }, () => uuidv4());
+    const guestQrIds = guestIds;
     const registeredAt = new Date().toISOString();
 
     // 4. Save to Google Sheets
@@ -57,18 +58,8 @@ export async function POST(req: NextRequest) {
 
     await saveStudent(studentRecord);
 
-    for (let i = 0; i < guestIds.length; i++) {
-      await saveGuest({
-        id: guestIds[i],
-        guestIndex: i + 1,
-        parentId: studentId,
-        parentName: `${firstName} ${lastName}`,
-        classe,
-        specialty,
-        scanned: false,
-        scannedAt: null,
-        qrId: guestQrIds[i],
-      });
+    if (guestCount > 0) {
+      await appendGuestRows(studentId, `${firstName} ${lastName}`, guestIds);
     }
 
     // 5. Generate QR codes for email

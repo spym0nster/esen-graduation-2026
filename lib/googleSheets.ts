@@ -2,6 +2,42 @@ import { getGoogleAccessToken } from './google-auth';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 
+export async function appendGuestRows(
+  studentId: string,
+  parentName: string,
+  guestIds: string[]
+): Promise<void> {
+  if (guestIds.length === 0) return;
+
+  const rows = guestIds.map((guestId, index) => [
+    guestId,
+    studentId,
+    parentName,
+    String(index + 1),
+    'FALSE',
+    '',
+  ]);
+
+  const accessToken = await getGoogleAccessToken();
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Guests!A:F:append?valueInputOption=USER_ENTERED`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values: rows }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('[Sheets] Guest row append failed:', errText);
+    throw new Error('Failed to append guest rows to Google Sheet');
+  }
+}
+
 /** Read all rows from a sheet tab. Row 0 is the header. */
 export async function sheetGetRows(sheetName: string): Promise<string[][]> {
   const accessToken = await getGoogleAccessToken();

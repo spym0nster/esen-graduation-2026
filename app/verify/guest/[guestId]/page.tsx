@@ -1,10 +1,10 @@
-import { getGuestByQrId, updateGuest } from "@/lib/rsvpService";
+import { getGuestById, markGuestScanned } from "@/lib/rsvpService";
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 
 export const runtime = 'nodejs';
 
 export default async function GuestVerifyPage({ params }: { params: { guestId: string } }) {
-  const guest = await getGuestByQrId(params.guestId);
+  const guest = await getGuestById(params.guestId);
 
   if (!guest) {
     return (
@@ -21,9 +21,11 @@ export default async function GuestVerifyPage({ params }: { params: { guestId: s
   const alreadyScanned = guest.scanned;
 
   if (!alreadyScanned) {
-    guest.scanned = true;
-    guest.scannedAt = new Date().toISOString();
-    await updateGuest(guest);
+    const updatedGuest = await markGuestScanned(params.guestId);
+    if (updatedGuest) {
+      guest.scanned = updatedGuest.scanned;
+      guest.scannedAt = updatedGuest.scannedAt;
+    }
   }
 
   if (alreadyScanned) {
