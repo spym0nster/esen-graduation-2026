@@ -1,22 +1,26 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { getStudentByQrId, getGuestById, updateStudent, markGuestScanned } from '@/lib/rsvpService';
+import { getStudentByQrId, getGuestById, updateStudent, updateGuest } from '@/lib/rsvpService';
 
 export async function POST(req: Request) {
   const body = await req.json();
   let { id } = body;
-  console.log('[Scanner] Looking up ID:', id);
 
-  const match = String(id || '').match(/\/verify\/(?:guest|student)\/([a-f0-9-]+)/);
-  if (match) {
-    id = match[1];
-    console.log('[Scanner] Normalized ID from URL to:', id);
-  }
+  // Accept a raw id or any verify URL form (/verify/<id> or /verify/guest/<id>) — extract the UUID.
+  const match = String(id || '').match(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  );
+  if (match) id = match[0];
 
   if (!id) return NextResponse.json({ status: 'invalid' });
 
-  const student = await getStudentByQrId(id);
-  console.log('[Scanner] Student lookup result:', student);
+  // Look up student and guest in parallel (they read different tabs) so a guest
+  // scan is as fast as a student scan instead of paying two sequential reads.
+  const [student, guest] = await Promise.all([
+    getStudentByQrId(id),
+    getGuestById(id),
+  ]);
+
   if (student) {
     if (student.scanned) {
       return NextResponse.json({
@@ -38,7 +42,6 @@ export async function POST(req: Request) {
     });
   }
 
-  const guest = await getGuestById(id);
   if (guest) {
     const name = `Accompagnateur ${guest.guestIndex} de ${guest.parentName}`;
     if (guest.scanned) {
@@ -50,7 +53,11 @@ export async function POST(req: Request) {
       });
     }
 
-    await markGuestScanned(id);
+    // Reuse the guest we already fetched (it carries _rowIndex) instead of
+    // re-reading the whole Guests tab inside markGuestScanned.
+    guest.scanned = true;
+    guest.scannedAt = new Date().toISOString();
+    await updateGuest(guest);
     return NextResponse.json({ status: 'success', name, type: 'Invité(e)' });
   }
 

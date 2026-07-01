@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { GALLERY_ASPECT, GALLERY_IMAGES } from "@/lib/images";
 
 export function GallerySection() {
+  const t = useTranslations("gallery");
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
 
   useEffect(() => {
@@ -32,12 +34,12 @@ export function GallerySection() {
         className="text-center mb-16 md:mb-24 px-4"
       >
         <h2 className="font-display text-[clamp(32px,4vw,60px)] text-white text-glow-gold">
-          Memories in the Making
+          {t("title")}
         </h2>
       </motion.div>
 
       <div className="w-full max-w-7xl mx-auto px-4 md:px-8">
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
+        <div className="columns-2 lg:columns-3 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
           {GALLERY_IMAGES.map((src, index) => (
             <motion.div
               key={src}
@@ -51,7 +53,7 @@ export function GallerySection() {
               className="break-inside-avoid relative overflow-hidden rounded-[12px] group cursor-pointer"
               onClick={() => setSelectedImage(index)}
             >
-              <div className="relative w-full h-64 md:h-auto md:min-h-[300px] bg-[#0D0B0E] transition-transform duration-500 group-hover:scale-105">
+              <div className="relative w-full h-40 sm:h-64 md:h-auto md:min-h-[300px] bg-[#0D0B0E] transition-transform duration-500 group-hover:scale-105">
                 <Image
                   src={src}
                   alt={`Ceremony memory ${index + 1}`}

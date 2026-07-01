@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function IntroSequence({ onComplete }: { onComplete: () => void }) {
   const [isVisible, setIsVisible] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+
+  const handleSkip = useCallback(() => {
+    setIsVisible(false);
+    localStorage.setItem("esen_intro_seen", "true");
+    setTimeout(onComplete, 800); // Wait for exit animation
+  }, [onComplete]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -29,13 +35,7 @@ export function IntroSequence({ onComplete }: { onComplete: () => void }) {
       clearTimeout(timer);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
-
-  const handleSkip = () => {
-    setIsVisible(false);
-    localStorage.setItem("esen_intro_seen", "true");
-    setTimeout(onComplete, 800); // Wait for exit animation
-  };
+  }, [handleSkip, onComplete]);
 
   if (!isMounted) return null;
 
@@ -45,7 +45,7 @@ export function IntroSequence({ onComplete }: { onComplete: () => void }) {
         <motion.div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0D0B0E] cursor-pointer"
           onClick={handleSkip}
-          exit={{ y: "-100%", opacity: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as any } }}
+          exit={{ y: "-100%", opacity: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }}
         >
           {/* Subtle golden light bloom */}
           <motion.div

@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { moderators } from "../../data/moderators";
 import { PersonCard } from "../ui/PersonCard";
 
 export function ModeratorsSection() {
+  const t = useTranslations("moderators");
   return (
     <section className="relative w-full py-[clamp(80px,10vw,160px)] bg-[var(--color-bg-primary)] overflow-hidden">
       <motion.div
@@ -18,10 +20,10 @@ export function ModeratorsSection() {
         className="text-center mb-16 md:mb-24 px-4"
       >
         <div className="font-sans uppercase tracking-[0.15em] text-[13px] text-[var(--color-gold-primary)] mb-4">
-          YOUR HOSTS FOR THE EVENING
+          {t("eyebrow")}
         </div>
         <h2 className="font-display text-[clamp(32px,4vw,60px)] text-white text-glow-gold">
-          Masters of Ceremony
+          {t("title")}
         </h2>
       </motion.div>
 
@@ -41,7 +43,7 @@ export function ModeratorsSection() {
               key={mod.id}
               variants={{
                 hidden: { opacity: 0, scale: 0.95 },
-                visible: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any } }
+                visible: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }
               }}
             >
               <PersonCard 
@@ -49,8 +51,8 @@ export function ModeratorsSection() {
                 role={mod.role} 
                 imageUrl={mod.imageUrl} 
                 size="large" 
-                imagePosition={(mod as any).imagePosition}
-                imageSizeOffset={(mod as any).imageSizeOffset}
+                imagePosition={(mod as { imagePosition?: string; imageSizeOffset?: string }).imagePosition}
+                imageSizeOffset={(mod as { imagePosition?: string; imageSizeOffset?: string }).imageSizeOffset}
               />
             </motion.div>
           ))}

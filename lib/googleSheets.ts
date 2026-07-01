@@ -9,18 +9,20 @@ export async function appendGuestRows(
 ): Promise<void> {
   if (guestIds.length === 0) return;
 
+  // Normalized Guests layout: [id, parentName, guestIndex, parentId, scanned, scannedAt].
+  // Column G ("Accompagnateur") is a sheet ARRAYFORMULA and is not written here.
   const rows = guestIds.map((guestId, index) => [
     guestId,
-    studentId,
     parentName,
     String(index + 1),
+    studentId,
     'FALSE',
     '',
   ]);
 
   const accessToken = await getGoogleAccessToken();
   const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Guests!A:F:append?valueInputOption=USER_ENTERED`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Guests!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
     {
       method: 'POST',
       headers: {
@@ -68,7 +70,7 @@ export async function sheetAppendRow(sheetName: string, row: string[]): Promise<
   const accessToken = await getGoogleAccessToken();
 
   const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A:Z:append?valueInputOption=USER_ENTERED`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheetName}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
     {
       method: 'POST',
       headers: {
@@ -138,7 +140,9 @@ export async function sheetDeleteRows(sheetName: string, rowNumbers: number[]): 
   }
 
   const metaData = await metaResponse.json();
-  const sheet = metaData.sheets?.find((s: any) => s.properties?.title === sheetName);
+  const sheet = metaData.sheets?.find(
+    (s: { properties?: { title?: string; sheetId?: number } }) => s.properties?.title === sheetName
+  );
   const sheetId = sheet?.properties?.sheetId;
 
   if (sheetId === undefined || sheetId === null) {

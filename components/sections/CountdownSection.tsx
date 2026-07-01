@@ -56,7 +56,7 @@ export function CountdownSection() {
         <div className="mx-auto mt-4 h-px w-32" style={{ background: "linear-gradient(90deg,#1B3A8C,#F0B429,#1B3A8C)" }} />
       </motion.div>
 
-      <div className="flex flex-wrap justify-center gap-4 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-fit mx-auto">
         {boxes.map((b) => (
           <CountdownBox key={b.label} value={mounted ? b.value : 0} label={b.label} />
         ))}

@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { committee } from "../../data/committee";
 import { PersonCard } from "../ui/PersonCard";
 
 export function CommitteeSection() {
+  const t = useTranslations("committee");
   return (
     <section id="committee" className="relative w-full py-[clamp(80px,10vw,160px)] bg-[var(--color-bg-secondary)] overflow-hidden">
       {/* Subtle border top to separate from previous section */}
@@ -21,10 +23,10 @@ export function CommitteeSection() {
         className="text-center mb-16 md:mb-24 px-4"
       >
         <div className="font-sans uppercase tracking-[0.15em] text-[13px] text-[var(--color-gold-primary)] mb-4">
-          THE TEAM BEHIND THE CEREMONY
+          {t("eyebrow")}
         </div>
         <h2 className="font-display text-[clamp(32px,4vw,60px)] text-white text-glow-gold">
-          ESEN Ambassadors
+          {t("title")}
         </h2>
       </motion.div>
 
@@ -44,7 +46,7 @@ export function CommitteeSection() {
               key={member.id}
               variants={{
                 hidden: { opacity: 0, scale: 0.95 },
-                visible: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any } }
+                visible: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }
               }}
             >
               <PersonCard
@@ -52,8 +54,8 @@ export function CommitteeSection() {
                 role={member.role}
                 imageUrl={member.imageUrl}
                 size="medium"
-                imagePosition={(member as any).imagePosition}
-                imageSizeOffset={(member as any).imageSizeOffset}
+                imagePosition={(member as { imagePosition?: string; imageSizeOffset?: string }).imagePosition}
+                imageSizeOffset={(member as { imagePosition?: string; imageSizeOffset?: string }).imageSizeOffset}
               />
             </motion.div>
           ))}

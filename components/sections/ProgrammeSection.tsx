@@ -2,6 +2,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useLocale, useTranslations } from "next-intl";
 import { programmeItems } from "../../data/programme";
 import { GlassCard } from "../ui/GlassCard";
 
@@ -9,14 +10,16 @@ import { GlassCard } from "../ui/GlassCard";
 // Animation variants for odd/even items
 const oddVariant = {
   hidden: { opacity: 0, x: -30 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 };
 const evenVariant = {
   hidden: { opacity: 0, x: 30 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 };
 
 export function ProgrammeSection() {
+  const t = useTranslations("programme");
+  const locale = useLocale();
   return (
     <section id="programme" className="relative w-full py-[clamp(80px,10vw,160px)] px-4 bg-[var(--color-bg-primary)] flex flex-col items-center overflow-hidden">
       {/* Header */}
@@ -31,10 +34,10 @@ export function ProgrammeSection() {
         className="text-center mb-16 md:mb-24"
       >
         <div className="font-sans uppercase tracking-[0.15em] text-[13px] text-[var(--color-gold-primary)] mb-4">
-          9 JULY 2026 · UTICA
+          {t("eyebrow")}
         </div>
         <h2 className="font-display text-[clamp(32px,4vw,60px)] text-white text-glow-gold">
-          The Programme
+          {t("title")}
         </h2>
       </motion.div>
 
@@ -48,6 +51,8 @@ export function ProgrammeSection() {
         <div className="flex flex-col gap-12">
           {programmeItems.map((item, index) => {
             const isOdd = index % 2 !== 0; // true for odd positions to render right side
+            const title = locale === "fr" ? item.titleFr : item.title;
+            const desc = locale === "fr" ? item.descriptionFr : item.description;
             return (
               <motion.div
                 key={index}
@@ -55,7 +60,7 @@ export function ProgrammeSection() {
                 whileInView="visible"
                 viewport={{ once: true, margin: "-80px" }}
                 variants={isOdd ? oddVariant : evenVariant}
-                className="relative grid grid-cols-[1fr_48px_1fr] items-center gap-4 md:gap-6"
+                className="relative md:grid md:grid-cols-[1fr_48px_1fr] md:items-center md:gap-6"
               >
                 {/* Desktop layout */}
                 <div className="hidden md:grid col-span-3" style={{ gridTemplateColumns: "1fr 48px 1fr" }}>
@@ -68,9 +73,9 @@ export function ProgrammeSection() {
                           className={`p-6 transition-all duration-200 group-hover:border-[var(--color-gold-primary)] group-hover:bg-[rgba(201,150,12,0.08)] ${item.highlight ? "border-l-4 border-[var(--color-gold-primary)]" : ""}`}
                         >
                           <h3 className={`font-serif text-[clamp(20px,2vw,24px)] font-semibold leading-snug ${item.highlight ? "text-[var(--color-gold-primary)]" : "text-white"}`}>
-                            {item.title}
+                            {title}
                           </h3>
-                          {item.description && <p className="mt-2 text-[var(--color-off-white)] opacity-75 text-[14px]">{item.description}</p>}
+                          {desc && <p className="mt-2 text-[var(--color-off-white)] opacity-75 text-[14px]">{desc}</p>}
                         </GlassCard>
                       </div>
                       {/* Dot */}
@@ -98,9 +103,9 @@ export function ProgrammeSection() {
                           className={`p-6 transition-all duration-200 group-hover:border-[var(--color-gold-primary)] group-hover:bg-[rgba(201,150,12,0.08)] ${item.highlight ? "border-l-4 border-[var(--color-gold-primary)]" : ""}`}
                         >
                           <h3 className={`font-serif text-[clamp(20px,2vw,24px)] font-semibold leading-snug ${item.highlight ? "text-[var(--color-gold-primary)]" : "text-white"}`}>
-                            {item.title}
+                            {title}
                           </h3>
-                          {item.description && <p className="mt-2 text-[var(--color-off-white)] opacity-75 text-[14px]">{item.description}</p>}
+                          {desc && <p className="mt-2 text-[var(--color-off-white)] opacity-75 text-[14px]">{desc}</p>}
                         </GlassCard>
                       </div>
                     </>
@@ -117,8 +122,8 @@ export function ProgrammeSection() {
                     <GlassCard
                       className={`p-6 transition-all duration-300 group-hover:border-[var(--color-gold-primary)] group-hover:bg-[rgba(201,150,12,0.08)] ${item.highlight ? "border-l-4 border-[var(--color-gold-primary)]" : ""}`}
                     >
-                      <h3 className={`font-serif text-[clamp(20px,2vw,24px)] font-semibold leading-snug ${item.highlight ? "text-[var(--color-gold-primary)]" : "text-white"}`}> {item.title} </h3>
-                      {item.description && <p className="mt-2 text-[var(--color-off-white)] opacity-75 text-[14px]">{item.description}</p>}
+                      <h3 className={`font-serif text-[clamp(20px,2vw,24px)] font-semibold leading-snug ${item.highlight ? "text-[var(--color-gold-primary)]" : "text-white"}`}> {title} </h3>
+                      {desc && <p className="mt-2 text-[var(--color-off-white)] opacity-75 text-[14px]">{desc}</p>}
                     </GlassCard>
                   </div>
                 </div>

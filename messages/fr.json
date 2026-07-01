@@ -5,6 +5,17 @@
     "tagline": "Façonner l'Avenir, Propulsé par l'Innovation",
     "classOf": "Promotion 2026"
   },
+  "nav": {
+    "programme": "Programme",
+    "students": "Étudiants",
+    "seating": "Places",
+    "gallery": "Galerie",
+    "rsvp": "RSVP"
+  },
+  "hero": {
+    "date": "9 JUILLET 2026",
+    "cta": "Réserver ma place"
+  },
   "countdown": {
     "eyebrow": "LE COMPTE À REBOURS",
     "title": "Le Grand Jour Approche",
@@ -13,11 +24,30 @@
     "minutes": "Minutes",
     "seconds": "Secondes"
   },
+  "programme": {
+    "eyebrow": "9 JUILLET 2026 · UTICA",
+    "title": "Le Programme"
+  },
+  "students": {
+    "eyebrow": "PROMOTION 2026",
+    "title": "Nos Majors Diplômés"
+  },
+  "moderators": {
+    "eyebrow": "VOS HÔTES DE LA SOIRÉE",
+    "title": "Maîtres de Cérémonie"
+  },
+  "gallery": {
+    "title": "Des Souvenirs en Création"
+  },
+  "committee": {
+    "eyebrow": "L'ÉQUIPE DERRIÈRE LA CÉRÉMONIE",
+    "title": "ESEN Ambassadors"
+  },
   "seating": {
-    "title": "Find Your Seat",
-    "eyebrow": "UTICA · 9 JULY 2026",
-    "filter": { "all": "All Zones" },
-    "mobile": { "hint": "← Scroll to explore the full map →" }
+    "title": "Trouvez votre place",
+    "eyebrow": "UTICA · 9 JUILLET 2026",
+    "filter": { "all": "Toutes les zones" },
+    "mobile": { "hint": "← Faites défiler pour explorer le plan →" }
   },
   "rsvp": {
     "title": "Confirmez votre présence",
@@ -34,7 +64,7 @@
     "placeholder": {
       "firstName": "Votre prénom",
       "lastName": "Votre nom",
-      "email": "votre@email.com",
+      "email": "prenom.nom@esen.tn",
       "phone": "+216 XX XXX XXX",
       "classe": "Classe",
       "specialty": "Spécialité",
@@ -48,5 +78,10 @@
       "title": "Place confirmée",
       "body": "Vérifiez votre boîte mail – votre QR code a été envoyé."
     }
+  },
+  "footer": {
+    "subtitle": "Cérémonie de Remise des Diplômes 2026",
+    "tagline": "Façonner l'Avenir, Propulsé par l'Innovation",
+    "rights": "© 2026 ESEN MANOUBA · TOUS DROITS RÉSERVÉS"
   }
 }

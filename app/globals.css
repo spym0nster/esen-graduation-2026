@@ -1,5 +1,13 @@
 @import "tailwindcss";
 html { scroll-behavior: smooth; }
+
+/* Hide scrollbar but keep scrolling (used for horizontally-scrollable areas) */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Scanner: animated scan line */
+@keyframes scanline { 0% { top: 6%; opacity: 0.2; } 50% { top: 90%; opacity: 1; } 100% { top: 6%; opacity: 0.2; } }
+.scan-line { animation: scanline 2.4s ease-in-out infinite; }
 :root {
   --background: #1C0F06;
   --foreground: #F5ECD7;

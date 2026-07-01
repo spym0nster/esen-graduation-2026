@@ -3,13 +3,33 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname, useRouter } from "@/i18n/routing";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
+
+function LangToggle({ locale, onSwitch }: { locale: string; onSwitch: (l: string) => void }) {
+  return (
+    <div className="flex gap-4 font-sans text-xs tracking-[0.15em] font-medium">
+      <button
+        onClick={() => onSwitch('en')}
+        className={`transition-colors hover:text-[var(--color-gold-primary)] ${locale === 'en' ? 'text-[var(--color-gold-primary)] border-b border-[var(--color-gold-primary)]' : 'text-[#8A6A1A]'}`}
+      >
+        EN
+      </button>
+      <button
+        onClick={() => onSwitch('fr')}
+        className={`transition-colors hover:text-[var(--color-gold-primary)] ${locale === 'fr' ? 'text-[var(--color-gold-primary)] border-b border-[var(--color-gold-primary)]' : 'text-[#8A6A1A]'}`}
+      >
+        FR
+      </button>
+    </div>
+  );
+}
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const locale = useLocale();
+  const t = useTranslations("nav");
   const router = useRouter();
   const pathname = usePathname();
   const [activeSection, setActiveSection] = useState<string>('');
@@ -23,11 +43,11 @@ export function Navbar() {
   }, []);
 
   const navLinks = [
-  { name: "Programme", href: "#programme" },
-  { name: "Students", href: "#majors" },
-  { name: "Seating", href: "#seating" },
-  { name: "Gallery", href: "#gallery" },
-  { name: "RSVP", href: "#rsvp" },
+  { key: "programme", href: "#programme" },
+  { key: "students", href: "#majors" },
+  { key: "seating", href: "#seating" },
+  { key: "gallery", href: "#gallery" },
+  { key: "rsvp", href: "#rsvp" },
 ];
 
   // Observe sections to highlight active nav link
@@ -54,23 +74,6 @@ export function Navbar() {
     router.replace(pathname, { locale: newLocale });
   };
 
-  const LangToggle = () => (
-    <div className="flex gap-4 font-sans text-xs tracking-[0.15em] font-medium">
-      <button 
-        onClick={() => switchLocale('en')}
-        className={`transition-colors hover:text-[var(--color-gold-primary)] ${locale === 'en' ? 'text-[var(--color-gold-primary)] border-b border-[var(--color-gold-primary)]' : 'text-[#8A6A1A]'}`}
-      >
-        EN
-      </button>
-      <button 
-        onClick={() => switchLocale('fr')}
-        className={`transition-colors hover:text-[var(--color-gold-primary)] ${locale === 'fr' ? 'text-[var(--color-gold-primary)] border-b border-[var(--color-gold-primary)]' : 'text-[#8A6A1A]'}`}
-      >
-        FR
-      </button>
-    </div>
-  );
-
   return (
     <>
       <motion.header
@@ -94,7 +97,7 @@ export function Navbar() {
                   const isActive = activeSection === link.href.slice(1);
                   return (
                                         <a
-                      key={link.name}
+                      key={link.key}
                       href={link.href}
                       onClick={(e) => {
                         e.preventDefault();
@@ -103,7 +106,7 @@ export function Navbar() {
                       }}
                       className="font-sans text-sm tracking-[0.1em] uppercase text-[var(--foreground)] hover:text-[var(--color-gold-primary)] transition-colors relative"
                     >
-                      {link.name}
+                      {t(link.key)}
                       <motion.div
                         className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-[var(--color-blue-primary)] to-[var(--color-gold-primary)]"
                         initial={{ width: 0 }}
@@ -115,7 +118,7 @@ export function Navbar() {
                 })}
             </div>
             <div className="h-4 w-[1px] bg-[rgba(64,102,180,0.3)]" />
-            <LangToggle />
+            <LangToggle locale={locale} onSwitch={switchLocale} />
           </nav>
 
           <button 
@@ -149,7 +152,7 @@ export function Navbar() {
             <nav className="flex flex-col gap-8 flex-1 justify-center px-4">
               {navLinks.map((link, i) => (
                 <motion.a
-                  key={link.name}
+                  key={link.key}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
                   initial={{ opacity: 0, x: -20 }}
@@ -157,7 +160,7 @@ export function Navbar() {
                   transition={{ delay: 0.1 * i, duration: 0.5 }}
                   className="font-display text-4xl text-[#F5ECD7] hover:text-[#F0B429] transition-colors"
                 >
-                  {link.name}
+                  {t(link.key)}
                 </motion.a>
               ))}
             </nav>
@@ -170,7 +173,7 @@ export function Navbar() {
             >
               <div className="flex items-center gap-4">
                 <span className="font-sans uppercase tracking-[0.15em] text-[12px] text-[var(--color-gold-primary)] mt-2">ESEN</span>
-                <LangToggle />
+                <LangToggle locale={locale} onSwitch={switchLocale} />
               </div>
             </motion.div>
           </motion.div>

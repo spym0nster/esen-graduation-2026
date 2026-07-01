@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { motion, useScroll } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { GoldButton } from "../ui/GoldButton";
 import { ParticleField } from "../ui/ParticleField";
@@ -10,7 +10,7 @@ import { HERO_IMAGE } from "@/lib/images";
 
 export function HeroSection({ introComplete }: { introComplete: boolean }) {
   const t = useTranslations("Global");
-  const { scrollY } = useScroll();
+  const th = useTranslations("hero");
   const [hasScrolled, setHasScrolled] = useState(false);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function HeroSection({ introComplete }: { introComplete: boolean }) {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 24 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as any } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
   };
 
   return (
@@ -97,7 +97,7 @@ export function HeroSection({ introComplete }: { introComplete: boolean }) {
             className="text-[var(--color-gold-primary)] text-glow-gold"
             variants={{
               hidden: { opacity: 0, y: 30 },
-              visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: 0.55, ease: [0.22, 1, 0.36, 1] as any } },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
             }}
             initial="hidden"
             animate="visible"
@@ -128,7 +128,7 @@ export function HeroSection({ introComplete }: { introComplete: boolean }) {
           initial="hidden"
           animate="visible"
         >
-          <span>9 JULY 2026</span>
+          <span>{th("date")}</span>
           <div className="h-[12px] w-[1px] bg-gradient-to-b from-transparent via-[#F0B429] to-transparent" />
           <a href="https://maps.google.com/?q=UTICA+Tunis+Tunisia" target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none", borderBottom: "1px solid rgba(240,180,41,0.40)", paddingBottom: "1px", transition: "border-color 0.3s" }}>UTICA</a>
           <div className="h-[12px] w-[1px] bg-gradient-to-b from-transparent via-[#F0B429] to-transparent" />
@@ -151,7 +151,7 @@ export function HeroSection({ introComplete }: { introComplete: boolean }) {
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            RSVP Now
+            {th("cta")}
           </GoldButton>
         </motion.div>
       </motion.div>

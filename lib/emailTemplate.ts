@@ -3,18 +3,36 @@ import { RSVPEntry } from "./rsvp";
 export function buildRSVPEmail(
   entry: RSVPEntry,
   studentId: string,
-  studentQrId: string,
-  guestIds: string[],
-  guestQrIds: string[],
-  studentQrDataUrl: string,
-  guestQrDataUrls: string[]
+  guestIds: string[]
 ): string {
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation.vercel.app";
+  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation-2026.vercel.app";
+  const studentTicketUrl = `${BASE_URL}/ticket/${studentId}`;
 
-  let guestHtml = "";
-  // Guest tickets are omitted; the PDF attachment contains all tickets.
-  // No guest HTML is generated.
+  const guestHtml =
+    entry.guestCount > 0 && guestIds.length > 0
+      ? `
+              <!-- GUEST TICKETS -->
+              <div style="margin-bottom:8px">
+                <div style="font-size:13px;color:#B8860B;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">
+                  BILLETS DE VOS ACCOMPAGNATEURS
+                </div>
+                ${guestIds
+                  .map(
+                    (gid, i) => `
+                <div style="margin-bottom:14px">
+                  <div style="font-size:13px;color:#444;margin-bottom:6px">Accompagnateur ${i + 1}</div>
+                  <a href="${BASE_URL}/ticket/guest/${gid}" style="display:inline-block;background:#F0B429;color:#1A1410;text-decoration:none;font-size:14px;font-weight:700;padding:10px 22px;border-radius:24px">
+                    Voir le billet →
+                  </a>
+                </div>`
+                  )
+                  .join("")}
+              </div>
 
+              <!-- GOLD SEPARATOR -->
+              <div style="width:100%;height:1px;background:rgba(240,180,41,0.3);margin:32px 0;"></div>
+      `
+      : "";
 
   return `
 <!DOCTYPE html>
@@ -72,9 +90,13 @@ export function buildRSVPEmail(
               <!-- GOLD SEPARATOR -->
               <div style="width:100%;height:1px;background:rgba(240,180,41,0.3);margin-bottom:32px;"></div>
 
-              
+              <!-- STUDENT TICKET CTA -->
+              <div style="text-align:center;margin-bottom:32px">
+                <a href="${studentTicketUrl}" style="display:inline-block;background:#0F2560;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 40px;border-radius:28px">
+                  📱 Voir mon billet
+                </a>
+              </div>
 
-              <!-- GUEST TICKETS -->
               ${guestHtml}
 
               <!-- WARNING BOX -->
@@ -113,4 +135,3 @@ export function buildRSVPEmail(
 </html>
   `;
 }
-

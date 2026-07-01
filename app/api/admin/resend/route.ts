@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStudentById, updateStudent, getGuestsForStudent } from "@/lib/rsvpService";
-import QRCode from "qrcode";
+import { getStudentById, updateStudent } from "@/lib/rsvpService";
 import { sendEmail } from "@/lib/emailService";
 import { cookies } from "next/headers";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
@@ -31,25 +30,17 @@ export async function POST(req: NextRequest) {
       specialty: student.specialty,
       guestCount: student.guestCount,
     };
-    // Generate QR data URLs
-    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation.vercel.app";
-    const studentQrDataUrl = await QRCode.toDataURL(`${BASE_URL}/verify/student/${student.qrId}`);
-    // Fetch guest records to obtain QR IDs
-    const guests = await getGuestsForStudent(student.guestIds || []);
-    const guestQrIds = guests.map(g => g.qrId);
-    const guestQrDataUrls = await Promise.all(
-      guestQrIds.map(id => QRCode.toDataURL(`${BASE_URL}/verify/guest/${id}`))
-    );
     await sendEmail({
       to: student.email,
       subject: "Votre Invitation Officielle – Cérémonie de Remise des Diplômes ESEN 2026",
-      html: buildRSVPEmail(entry, studentId, student.qrId, student.guestIds || [], guestQrIds, studentQrDataUrl, guestQrDataUrls),
+      html: buildRSVPEmail(entry, studentId, student.guestIds || []),
     });
     student.emailStatus = "Sent";
     await updateStudent(student);
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Resend error:", err);
-    return NextResponse.json({ error: "Failed to resend email", details: err.message }, { status: 500 });
+    const details = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: "Failed to resend email", details }, { status: 500 });
   }
 }

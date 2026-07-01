@@ -25,7 +25,7 @@ export interface GuestRecord {
 }
 
 export const VALID_CLASSES = ["L1", "L2", "L3", "M1", "M2", "Autre"];
-export const VALID_SPECIALTIES = ["BC", "BI", "Business Information System", "E-Business", "VIC", "DSSD", "WI", "Autre"];
+export const VALID_SPECIALTIES = ["BI", "BIS", "EBUS", "E-MDS", "DSSD", "WI", "EBUS (en ligne)", "VIC", "CGBI", "Autre"];
 
 export function validateRSVP(data: Partial<RSVPEntry>): { isValid: boolean; errors: Record<string, string> } {
   const errors: Record<string, string> = {};
@@ -41,6 +41,12 @@ export function validateRSVP(data: Partial<RSVPEntry>): { isValid: boolean; erro
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!data.email || !emailRegex.test(data.email)) {
     errors.email = "Email invalide";
+  } else {
+    const domain = data.email.split("@")[1].toLowerCase().trim();
+    const allowedDomains = ["esen.tn", "esen.uma.tn"];
+    if (!allowedDomains.includes(domain)) {
+      errors.email = "Veuillez utiliser votre adresse e-mail ESEN (@esen.tn ou @esen.uma.tn)";
+    }
   }
 
   if (!data.phone) {

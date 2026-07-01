@@ -13,9 +13,11 @@ const S = {
   registeredAt: 9, scanned: 10, scannedAt: 11, emailStatus: 12, qrId: 13,
 } as const;
 
-// Guests tab
+// Guests tab — normalized layout (see migrate-guests): readable, one format.
+// A=id, B=parentName, C=guestIndex, D=parentId, E=scanned, F=scannedAt,
+// G="Accompagnateur n°X de [Nom]" is an ARRAYFORMULA in the sheet (not written by code).
 const G = {
-  guestId: 0, parentId: 1, parentName: 2, guestIndex: 3,
+  guestId: 0, parentName: 1, guestIndex: 2, parentId: 3,
   scanned: 4, scannedAt: 5,
 } as const;
 
@@ -26,8 +28,8 @@ const STUDENT_HEADERS = [
 ];
 
 const GUEST_HEADERS = [
-  "guestId", "parentId", "parentName", "guestIndex",
-  "scanned", "scannedAt",
+  "ID billet", "Nom étudiant", "N° accomp.", "ID étudiant",
+  "Scanné", "Scanné le",
 ];
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
@@ -111,12 +113,14 @@ function rowToGuest(row: string[], rowIndex: number): StoredGuest {
   };
 }
 
+// Writes columns A–F only; column G ("Accompagnateur") is a sheet ARRAYFORMULA
+// and must be left untouched.
 function guestToRow(g: StoredGuest): string[] {
   return [
     g.id,
-    g.parentId,
     g.parentName,
     String(g.guestIndex),
+    g.parentId,
     g.scanned ? "TRUE" : "FALSE",
     g.scannedAt || "",
   ];
@@ -167,6 +171,33 @@ export async function getStudentByEmail(email: string): Promise<StoredStudent | 
   );
   if (idx === -1) return null;
   return rowToStudent(rows[idx], idx + 1);
+}
+
+// ─── Duplicate detection (email OR phone OR full name) ──────────────────────────
+function normEmail(e?: string): string {
+  return (e || "").trim().toLowerCase();
+}
+// Keep only digits; Tunisian numbers are 8 digits, so compare on the last 8
+// (handles "+216 28 735 769", "0028735769", "28735769" → "28735769").
+function normPhone(p?: string): string {
+  const d = (p || "").replace(/\D/g, "");
+  return d.length > 8 ? d.slice(-8) : d;
+}
+/** Returns an existing student if the email OR phone already matches — else null.
+ *  Name is intentionally NOT used as a criterion so real homonyms (same first+last
+ *  name but different people/phones) can both register. */
+export async function findDuplicateStudent(
+  email: string,
+  phone: string
+): Promise<StoredStudent | null> {
+  const students = await getAllStudents();
+  const e = normEmail(email);
+  const p = normPhone(phone);
+  return (
+    students.find(
+      (s) => (!!e && normEmail(s.email) === e) || (!!p && normPhone(s.phone) === p)
+    ) || null
+  );
 }
 
 export async function saveStudent(student: StoredStudent): Promise<void> {

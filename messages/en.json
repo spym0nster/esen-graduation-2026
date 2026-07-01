@@ -5,6 +5,17 @@
     "tagline": "Shaping the Future, Powered by Innovation",
     "classOf": "Class of 2026"
   },
+  "nav": {
+    "programme": "Programme",
+    "students": "Students",
+    "seating": "Seating",
+    "gallery": "Gallery",
+    "rsvp": "RSVP"
+  },
+  "hero": {
+    "date": "9 JULY 2026",
+    "cta": "RSVP Now"
+  },
   "countdown": {
     "eyebrow": "THE COUNTDOWN BEGINS",
     "title": "Counting Down to the Big Day",
@@ -12,6 +23,25 @@
     "hours": "Hours",
     "minutes": "Minutes",
     "seconds": "Seconds"
+  },
+  "programme": {
+    "eyebrow": "9 JULY 2026 · UTICA",
+    "title": "The Programme"
+  },
+  "students": {
+    "eyebrow": "CLASS OF 2026",
+    "title": "Our Graduating Majors"
+  },
+  "moderators": {
+    "eyebrow": "YOUR HOSTS FOR THE EVENING",
+    "title": "Masters of Ceremony"
+  },
+  "gallery": {
+    "title": "Memories in the Making"
+  },
+  "committee": {
+    "eyebrow": "THE TEAM BEHIND THE CEREMONY",
+    "title": "ESEN Ambassadors"
   },
   "seating": {
     "title": "Find Your Seat",
@@ -34,7 +64,7 @@
     "placeholder": {
       "firstName": "Your first name",
       "lastName": "Your last name",
-      "email": "you@example.com",
+      "email": "prenom.nom@esen.tn",
       "phone": "+216 XX XXX XXX",
       "classe": "Class",
       "specialty": "Specialty",
@@ -48,5 +78,10 @@
       "title": "Place Confirmed",
       "body": "Check your inbox – your QR code has been sent."
     }
+  },
+  "footer": {
+    "subtitle": "Graduation Ceremony 2026",
+    "tagline": "Shaping the Future, Powered by Innovation",
+    "rights": "© 2026 ESEN MANOUBA · ALL RIGHTS RESERVED"
   }
 }

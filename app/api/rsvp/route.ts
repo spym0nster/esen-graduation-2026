@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import QRCode from "qrcode";
 import { validateRSVP, RSVPEntry } from "@/lib/rsvp";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
 import { sendEmail } from "@/lib/emailService";
-import { getStudentByEmail, saveStudent, updateStudent } from "@/lib/rsvpService";
+import { findDuplicateStudent, saveStudent } from "@/lib/rsvpService";
 import { generateTicketPDF } from "@/lib/pdfGenerator";
 import { appendGuestRows } from "@/lib/googleSheets";
 
@@ -25,8 +24,8 @@ export async function POST(req: NextRequest) {
 
     const { firstName, lastName, email, phone, classe, specialty, guestCount } = body as RSVPEntry;
 
-    // 2. Check duplicate
-    const existing = await getStudentByEmail(email);
+    // 2. Check duplicate (email OR phone OR full name already registered)
+    const existing = await findDuplicateStudent(email, phone);
     if (existing) {
       return NextResponse.json({ error: "already_registered" }, { status: 409 });
     }
@@ -38,8 +37,52 @@ export async function POST(req: NextRequest) {
     const guestQrIds = guestIds;
     const registeredAt = new Date().toISOString();
 
-    // 4. Save to Google Sheets
-    const studentRecord = {
+    // 4. Build the ticket PDF (kept in memory only — nothing is persisted yet)
+    const pdfBuffer = await generateTicketPDF(
+      { firstName, lastName, classe, specialty, qrId: studentQrId },
+      guestQrIds.map((qrId, i) => ({ qrId, guestIndex: i + 1 }))
+    );
+
+    // 5. Try to DELIVER first, so we verify the address before creating anything.
+    let emailStatus: "Sent" | "Failed" = "Failed";
+    let smtpRejected = false; // SMTP explicitly refused the recipient (address not found)
+    try {
+      const info = (await sendEmail({
+        to: email,
+        subject: "Votre Invitation Officielle – Cérémonie de Remise des Diplômes ESEN 2026",
+        html: buildRSVPEmail(
+          { firstName, lastName, email, phone, classe, specialty, guestCount },
+          studentId,
+          guestIds
+        ),
+        attachments: [
+          {
+            filename: `ESEN_Graduation_Tickets_${firstName}_${lastName}.pdf`,
+            content: pdfBuffer,
+          },
+        ],
+      })) as { accepted?: unknown[]; rejected?: unknown[] };
+
+      const accepted = Array.isArray(info?.accepted) ? info.accepted.length : 0;
+      const rejected = Array.isArray(info?.rejected) ? info.rejected.length : 0;
+      smtpRejected = rejected > 0; // definitive refusal for this address
+      emailStatus = accepted > 0 && rejected === 0 ? "Sent" : "Failed";
+    } catch (emailErr) {
+      // Transient/connection error — NOT a definitive "address not found".
+      // Keep the registration so a valid attendee is never lost (resend later).
+      console.error("Email send error (kept, status Failed) for", email, ":", emailErr);
+      emailStatus = "Failed";
+      smtpRejected = false;
+    }
+
+    // 6. Address explicitly undeliverable → do NOT create the ticket / row.
+    if (smtpRejected) {
+      console.error("Undeliverable address — registration NOT created:", email);
+      return NextResponse.json({ error: "email_undeliverable" }, { status: 422 });
+    }
+
+    // 7. Deliverable (or transient error) → create the registration exactly once.
+    await saveStudent({
       id: studentId,
       firstName,
       lastName,
@@ -52,71 +95,12 @@ export async function POST(req: NextRequest) {
       registeredAt,
       scanned: false,
       scannedAt: null,
-      emailStatus: "Pending" as const,
+      emailStatus,
       qrId: studentQrId,
-    };
-
-    await saveStudent(studentRecord);
+    });
 
     if (guestCount > 0) {
       await appendGuestRows(studentId, `${firstName} ${lastName}`, guestIds);
-    }
-
-    // 5. Generate QR codes for email
-    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation.vercel.app";
-    
-    const studentQrDataUrl = await QRCode.toDataURL(
-      `${BASE_URL}/verify/student/${studentQrId}`,
-      { width: 300, margin: 2, color: { dark: "#0F2560", light: "#FFFFFF" } }
-    );
-
-    const guestQrDataUrls = await Promise.all(
-      guestQrIds.map((qrId) =>
-        QRCode.toDataURL(`${BASE_URL}/verify/guest/${qrId}`, {
-          width: 300,
-          margin: 2,
-          color: { dark: "#1B3A8C", light: "#FFFFFF" },
-        })
-      )
-    );
-
-    // 6. Generate PDF
-    const pdfBuffer = await generateTicketPDF(
-      { firstName, lastName, classe, specialty, qrId: studentQrId },
-      guestQrIds.map((qrId, i) => ({ qrId, guestIndex: i + 1 }))
-    );
-
-    // 7. Send email with QR codes and PDF attachment
-    let emailStatus = "Pending";
-    try {
-      await sendEmail({
-        to: email,
-        subject: "Votre Invitation Officielle – Cérémonie de Remise des Diplômes ESEN 2026",
-        html: buildRSVPEmail(
-          { firstName, lastName, email, phone, classe, specialty, guestCount },
-          studentId,
-          studentQrId,
-          guestIds,
-          guestQrIds,
-          studentQrDataUrl,
-          guestQrDataUrls
-        ),
-        attachments: [
-          {
-            filename: `ESEN_Graduation_Tickets_${firstName}_${lastName}.pdf`,
-            content: pdfBuffer,
-          },
-        ],
-      });
-      emailStatus = "Sent";
-
-      const savedStudent = await getStudentByEmail(email);
-      if (savedStudent) {
-        savedStudent.emailStatus = "Sent";
-        await updateStudent(savedStudent);
-      }
-    } catch (emailErr) {
-      console.error("Failed to send email to", email, ":", emailErr);
     }
 
     return NextResponse.json({ success: true, studentId, guestCount, emailStatus });

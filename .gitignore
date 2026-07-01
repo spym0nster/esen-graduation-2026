@@ -55,3 +55,15 @@ dist
 
 .vercel
 .env*
+
+# local Claude Code agent config
+.claude/
+
+# loose working/source media in repo root (not used by the app)
+/*.mp4
+/*.pdf
+/*.jpg
+/*.jpeg
+/*.png
+/*.jfif
+/*.webp

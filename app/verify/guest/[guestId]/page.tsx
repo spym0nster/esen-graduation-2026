@@ -3,8 +3,9 @@ import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 
 export const runtime = 'nodejs';
 
-export default async function GuestVerifyPage({ params }: { params: { guestId: string } }) {
-  const guest = await getGuestById(params.guestId);
+export default async function GuestVerifyPage({ params }: { params: Promise<{ guestId: string }> }) {
+  const { guestId } = await params;
+  const guest = await getGuestById(guestId);
 
   if (!guest) {
     return (
@@ -12,7 +13,7 @@ export default async function GuestVerifyPage({ params }: { params: { guestId: s
         <div style={{ textAlign: "center", color: "#E05252" }}>
           <XCircle size={64} style={{ margin: "0 auto 16px" }} />
           <h1 style={{ fontFamily: "Inter, sans-serif", fontSize: "24px", fontWeight: "bold" }}>✕ QR CODE INVALIDE</h1>
-          <p style={{ color: "#999", marginTop: "8px" }}>Ce code n'est pas reconnu dans notre système.</p>
+          <p style={{ color: "#999", marginTop: "8px" }}>{"Ce code n'est pas reconnu dans notre système."}</p>
         </div>
       </div>
     );
@@ -21,7 +22,7 @@ export default async function GuestVerifyPage({ params }: { params: { guestId: s
   const alreadyScanned = guest.scanned;
 
   if (!alreadyScanned) {
-    const updatedGuest = await markGuestScanned(params.guestId);
+    const updatedGuest = await markGuestScanned(guestId);
     if (updatedGuest) {
       guest.scanned = updatedGuest.scanned;
       guest.scannedAt = updatedGuest.scannedAt;
@@ -36,7 +37,7 @@ export default async function GuestVerifyPage({ params }: { params: { guestId: s
           <h1 style={{ fontFamily: "Inter, sans-serif", fontSize: "20px", fontWeight: 700, color: "#B8860B", letterSpacing: "3px" }}>⚠ DÉJÀ SCANNÉ</h1>
           <p style={{ color: "#444", marginTop: "16px" }}>Ce QR code a déjà été utilisé.</p>
           <p style={{ color: "#666", fontSize: "14px", marginTop: "8px" }}>Premier scan : {new Date(guest.scannedAt || "").toLocaleString()}</p>
-          <p style={{ color: "#666", fontSize: "14px", marginTop: "8px" }}>Contactez l'organisation en cas d'erreur.</p>
+          <p style={{ color: "#666", fontSize: "14px", marginTop: "8px" }}>{"Contactez l'organisation en cas d'erreur."}</p>
         </div>
       </div>
     );

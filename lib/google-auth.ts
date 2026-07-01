@@ -27,7 +27,13 @@ function getPrivateKey(): string {
   return key;
 }
 
-export async function getGoogleAccessToken(): Promise<string> {
+// Module-level token cache. A Google access token lives ~1h; reusing it avoids a
+// full OAuth round-trip on every sheet read/write, which is the main scan latency.
+let cachedToken: string | null = null;
+let cachedTokenExp = 0; // epoch seconds when the cached token expires
+let inFlight: Promise<string> | null = null; // dedupe concurrent refreshes
+
+async function mintAccessToken(): Promise<string> {
   const privateKey = getPrivateKey();
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
 
@@ -63,5 +69,21 @@ export async function getGoogleAccessToken(): Promise<string> {
   }
 
   const data = await response.json();
-  return data.access_token;
+  const ttl = typeof data.expires_in === 'number' ? data.expires_in : 3600;
+  cachedToken = data.access_token;
+  // Refresh 5 min early to avoid using a token that expires mid-request.
+  cachedTokenExp = Math.floor(Date.now() / 1000) + ttl - 300;
+  return cachedToken as string;
+}
+
+export async function getGoogleAccessToken(): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedToken && now < cachedTokenExp) return cachedToken;
+  // Collapse concurrent refreshes (e.g. student + guest lookups) into one exchange.
+  if (!inFlight) {
+    inFlight = mintAccessToken().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
 }

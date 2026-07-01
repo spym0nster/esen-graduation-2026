@@ -22,10 +22,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: "Test email sent successfully." });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Test Email Error:", error);
+    const details = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Failed to send test email.", details: error.message },
+      { error: "Failed to send test email.", details },
       { status: 500 }
     );
   }

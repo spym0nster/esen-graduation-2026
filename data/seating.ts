@@ -12,7 +12,7 @@ export const zoneConfig: Record<ZoneKey, {
   BI:    { label:"Business Intelligence",            labelFr:"Business Intelligence",            color:"rgba(15,37,96,0.80)",   border:"#1B3A8C", glow:"rgba(15,37,96,0.45)",   text:"#FFFFFF" },
   EB:    { label:"E-Business",                       labelFr:"E-Business",                       color:"rgba(0,140,180,0.75)",  border:"#00A8CC", glow:"rgba(0,168,204,0.40)",  text:"#FFFFFF" },
   M2:    { label:"Master 2",                         labelFr:"Master 2",                         color:"rgba(0,100,160,0.75)",  border:"#0078B8", glow:"rgba(0,120,184,0.40)",  text:"#FFFFFF" },
-  MDS:   { label:"Management of Digital Systems",    labelFr:"Management des Systèmes Numériques",color:"rgba(240,180,41,0.85)", border:"#F0B429", glow:"rgba(240,180,41,0.45)", text:"#0F2560" },
+  MDS:   { label:"E-Marketing & Digital Strategies",    labelFr:"E-Marketing et Digital Strategies",color:"rgba(240,180,41,0.85)", border:"#F0B429", glow:"rgba(240,180,41,0.45)", text:"#0F2560" },
   ESEN:  { label:"ESEN General",                     labelFr:"ESEN Général",                     color:"rgba(46,85,184,0.65)",  border:"#2E55B8", glow:"rgba(46,85,184,0.35)",  text:"#FFFFFF" },
   Laur:  { label:"Laureates",                        labelFr:"Lauréats",                         color:"rgba(200,160,20,0.60)", border:"#C9A014", glow:"rgba(200,160,20,0.35)", text:"#FFFFFF" },
   Admin: { label:"VIP",                              labelFr:"VIP",                              color:"rgba(255,255,255,0.07)", border:"rgba(255,255,255,0.18)", glow:"transparent", text:"#F5ECD7" },

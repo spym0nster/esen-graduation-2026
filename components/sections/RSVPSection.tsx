@@ -8,6 +8,16 @@ import { GoldButton } from "../ui/GoldButton";
 import { useTranslations } from "next-intl";
 import { validateRSVP, VALID_CLASSES, VALID_SPECIALTIES, RSVPEntry } from "@/lib/rsvp";
 
+function ErrorMsg({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return (
+    <div className="flex items-center gap-1 mt-1 text-[#E05252] font-sans text-[12px]">
+      <AlertCircle size={12} />
+      <span>{msg}</span>
+    </div>
+  );
+}
+
 export function RSVPSection() {
   const t = useTranslations("rsvp");
   
@@ -68,15 +78,22 @@ export function RSVPSection() {
           return;
         }
         if (response.status === 409) {
-          throw new Error("Cet email est déjà inscrit. / This email is already registered.");
+          throw new Error(
+            "Une inscription existe déjà avec cet email ou ce numéro de téléphone. Pour toute modification, contactez l'organisation : ceremonie.graduation@esen.tn"
+          );
+        }
+        if (response.status === 422) {
+          throw new Error(
+            "Adresse e-mail introuvable ou non délivrable. Vérifiez votre adresse ESEN (@esen.tn) puis réessayez."
+          );
         }
         throw new Error(data.error || "Une erreur est survenue.");
       }
 
       setStatus("success");
-    } catch (err: any) {
+    } catch (err) {
       setStatus("error");
-      setApiError(err.message || "Failed to submit RSVP.");
+      setApiError(err instanceof Error ? err.message : "Failed to submit RSVP.");
     }
   };
 
@@ -95,16 +112,6 @@ export function RSVPSection() {
     backgroundPosition: "right 14px center",
     paddingRight: "40px",
     WebkitAppearance: "none" as const,
-  };
-
-  const ErrorMsg = ({ msg }: { msg?: string }) => {
-    if (!msg) return null;
-    return (
-      <div className="flex items-center gap-1 mt-1 text-[#E05252] font-sans text-[12px]">
-        <AlertCircle size={12} />
-        <span>{msg}</span>
-      </div>
-    );
   };
 
   return (

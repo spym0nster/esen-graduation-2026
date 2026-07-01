@@ -10,7 +10,7 @@ async function isAuthed() {
   return cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSCODE;
 }
 
-const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation.vercel.app";
+const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation-2026.vercel.app";
 
 export async function GET(req: NextRequest) {
   if (!await isAuthed()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

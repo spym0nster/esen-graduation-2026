@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 interface Particle {
   id: number;
   x: number;
+  xDrift: number;
   size: number;
   duration: number;
   delay: number;
@@ -19,6 +20,7 @@ export function ParticleField() {
     const newParticles: Particle[] = Array.from({ length: 35 }).map((_, i) => ({
       id: i,
       x: Math.random() * 100, // percentage
+      xDrift: (Math.random() - 0.5) * 5, // horizontal drift in vw (precomputed for render purity)
       size: Math.random() * 3 + 2, // 2-5px
       duration: Math.random() * 10 + 10, // 10-20s
       delay: Math.random() * 5, // 0-5s delay
@@ -43,7 +45,7 @@ export function ParticleField() {
           }}
           animate={{
             y: ["0vh", "-110vh"],
-            x: ["0vw", `${(Math.random() - 0.5) * 5}vw`],
+            x: ["0vw", `${p.xDrift}vw`],
           }}
           transition={{
             duration: p.duration,
