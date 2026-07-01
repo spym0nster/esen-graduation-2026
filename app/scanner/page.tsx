@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { CheckCircle, AlertTriangle, XCircle, Search, Clock, UserCheck, X } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, Search, UserCheck } from "lucide-react";
 
 type ScanResult = {
   status: string;
@@ -11,11 +11,9 @@ type ScanResult = {
 };
 
 type SearchHit = { id: string; name: string; type: string; detail?: string; scanned: boolean };
-type HistoryEntry = { time: string; name: string; type: string; status: string; source: string };
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 const RESET_MS = 1400;
-const HISTORY_KEY = "esen_scan_history";
 
 export default function ScannerPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -29,24 +27,8 @@ export default function ScannerPage() {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   const vibrate = (pattern: number | number[]) => { try { navigator.vibrate?.(pattern); } catch {} };
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (raw) setHistory(JSON.parse(raw));
-    } catch {}
-  }, []);
-
-  const addHistory = useCallback((entry: HistoryEntry) => {
-    setHistory((prev) => {
-      const next = [entry, ...prev].slice(0, 60);
-      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, []);
 
   const resume = useCallback(() => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -56,7 +38,7 @@ export default function ScannerPage() {
   }, []);
 
   // Shared check-in path used by BOTH the camera and the name-search "Allow entry".
-  const submitId = useCallback(async (id: string, source: string) => {
+  const submitId = useCallback(async (id: string) => {
     try {
       const res = await fetch("/api/scanner/verify", {
         method: "POST",
@@ -68,21 +50,12 @@ export default function ScannerPage() {
       if (data.status === "success") vibrate(120);
       else if (data.status === "already_scanned") vibrate([60, 50, 60]);
       else vibrate([200, 80, 200]);
-      const now = new Date();
-      const time = now.toLocaleTimeString("fr-TN", { hour: "2-digit", minute: "2-digit" });
-      addHistory({
-        time,
-        name: data.name || "—",
-        type: data.type || "",
-        status: data.status,
-        source,
-      });
     } catch {
       setResult({ status: "error" });
       vibrate([200, 80, 200]);
     }
     resetTimer.current = setTimeout(resume, RESET_MS);
-  }, [addHistory, resume]);
+  }, [resume]);
 
   useEffect(() => {
     const scanner = new Html5Qrcode("reader", { verbose: false });
@@ -114,7 +87,7 @@ export default function ScannerPage() {
           scanningRef.current = false;
           const match = decodedText.match(UUID_RE);
           const id = match ? match[0] : decodedText;
-          await submitId(id, "Caméra");
+          await submitId(id);
         },
         () => {}
       )
@@ -154,7 +127,7 @@ export default function ScannerPage() {
       : `Autoriser l'entrée de ${hit.name} ?`;
     if (!confirm(msg)) return;
     scanningRef.current = false;
-    submitId(hit.id, "Recherche");
+    submitId(hit.id);
   };
 
   const ok = result?.status === "success";
@@ -333,52 +306,6 @@ export default function ScannerPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Scan history (always visible) */}
-      <div style={{ width: "100%", maxWidth: "min(96vw, 540px)", marginTop: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#F0B429", fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
-              <Clock size={16} /> Historique ({history.length})
-            </div>
-            {history.length > 0 && (
-              <button
-                onClick={() => { if (confirm("Effacer l'historique de cet appareil ?")) { setHistory([]); try { localStorage.removeItem(HISTORY_KEY); } catch {} } }}
-                style={{ background: "none", border: "none", color: "rgba(245,236,215,0.5)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
-              >
-                <X size={13} /> Effacer
-              </button>
-            )}
-          </div>
-          {history.length === 0 ? (
-            <div style={{
-              background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)",
-              borderRadius: 10, padding: "18px 12px", textAlign: "center",
-              color: "rgba(245,236,215,0.5)", fontSize: 13,
-            }}>
-              Aucun scan pour l&apos;instant — les entrées apparaîtront ici.
-            </div>
-          ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {history.map((h, i) => {
-              const good = h.status === "success";
-              const warn = h.status === "already_scanned";
-              const col = good ? "#34D399" : warn ? "#F0B429" : "#F87171";
-              const icon = good ? "✓" : warn ? "!" : "✕";
-              return (
-                <div key={i} style={{
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <span style={{ color: "rgba(245,236,215,0.55)", fontSize: 12, fontVariantNumeric: "tabular-nums", width: 42 }}>{h.time}</span>
-                  <span style={{ color: col, fontWeight: 800, fontSize: 14, width: 14, textAlign: "center" }}>{icon}</span>
-                  <span style={{ flex: 1, minWidth: 0, color: "#F5ECD7", fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</span>
-                  <span style={{ color: "rgba(245,236,215,0.5)", fontSize: 11, whiteSpace: "nowrap" }}>{h.type}{h.source === "Recherche" ? " · manuel" : ""}</span>
-                </div>
-              );
-            })}
-          </div>
-          )}
       </div>
 
       {/* ESEN Ambassadors logo */}
