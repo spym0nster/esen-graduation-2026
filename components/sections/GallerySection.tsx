@@ -9,17 +9,38 @@ import { GALLERY_ASPECT, GALLERY_IMAGES } from "@/lib/images";
 export function GallerySection() {
   const t = useTranslations("gallery");
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [liveImages, setLiveImages] = useState<string[]>([]);
+
+  // Live gallery: committee-uploaded photos appear first, then the static ones.
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/media?type=gallery", { cache: "no-store" });
+        const data = await res.json();
+        if (alive) setLiveImages((data.items || []).map((m: { url: string }) => m.url));
+      } catch {}
+    };
+    load();
+    const id = setInterval(load, 15000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  const images: { src: string; live: boolean }[] = [
+    ...liveImages.map((src) => ({ src, live: true })),
+    ...GALLERY_IMAGES.map((src) => ({ src, live: false })),
+  ];
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedImage === null) return;
       if (e.key === "Escape") setSelectedImage(null);
-      if (e.key === "ArrowRight") setSelectedImage((prev) => (prev !== null && prev < GALLERY_IMAGES.length - 1 ? prev + 1 : prev));
+      if (e.key === "ArrowRight") setSelectedImage((prev) => (prev !== null && prev < images.length - 1 ? prev + 1 : prev));
       if (e.key === "ArrowLeft") setSelectedImage((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedImage]);
+  }, [selectedImage, images.length]);
 
   return (
     <section id="gallery" className="relative w-full py-[clamp(80px,10vw,160px)] bg-[#1A1410] overflow-hidden">
@@ -40,9 +61,9 @@ export function GallerySection() {
 
       <div className="w-full max-w-7xl mx-auto px-4 md:px-8">
         <div className="columns-2 lg:columns-3 gap-3 sm:gap-6 space-y-3 sm:space-y-6">
-          {GALLERY_IMAGES.map((src, index) => (
+          {images.map((img, index) => (
             <motion.div
-              key={src}
+              key={img.src}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-80px" }}
@@ -54,16 +75,26 @@ export function GallerySection() {
               onClick={() => setSelectedImage(index)}
             >
               <div className="relative w-full h-40 sm:h-64 md:h-auto md:min-h-[300px] bg-[#0D0B0E] transition-transform duration-500 group-hover:scale-105">
-                <Image
-                  src={src}
-                  alt={`Ceremony memory ${index + 1}`}
-                  width={1920}
-                  height={Math.round(1920 * GALLERY_ASPECT)}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  quality={80}
-                  loading="lazy"
-                  className="h-full w-full object-cover object-center md:h-auto md:min-h-[300px]"
-                />
+                {img.live ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={img.src}
+                    alt={`Ceremony memory ${index + 1}`}
+                    loading="lazy"
+                    className="h-full w-full object-cover object-center md:h-auto md:min-h-[300px]"
+                  />
+                ) : (
+                  <Image
+                    src={img.src}
+                    alt={`Ceremony memory ${index + 1}`}
+                    width={1920}
+                    height={Math.round(1920 * GALLERY_ASPECT)}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    quality={80}
+                    loading="lazy"
+                    className="h-full w-full object-cover object-center md:h-auto md:min-h-[300px]"
+                  />
+                )}
               </div>
               {/* Overlay with subtle gold shimmer */}
               <div className="absolute inset-0 bg-[#0D0B0E]/0 group-hover:bg-[#0D0B0E]/40 transition-colors duration-300 flex items-center justify-center">
@@ -96,14 +127,10 @@ export function GallerySection() {
               className="relative max-w-full max-h-[90vh] w-auto h-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <Image
-                src={GALLERY_IMAGES[selectedImage]}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={images[selectedImage]?.src}
                 alt={`Ceremony memory ${selectedImage + 1}`}
-                width={1920}
-                height={Math.round(1920 * GALLERY_ASPECT)}
-                sizes="100vw"
-                quality={90}
-                priority
                 className="max-h-[90vh] w-auto h-auto rounded-[8px] shadow-[0_0_50px_rgba(201,150,12,0.15)] object-contain"
               />
             </motion.div>
@@ -117,7 +144,7 @@ export function GallerySection() {
               </button>
             )}
             
-            {selectedImage < GALLERY_IMAGES.length - 1 && (
+            {selectedImage < images.length - 1 && (
               <button 
                 className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-[rgba(255,255,255,0.05)] border border-[rgba(201,150,12,0.2)] text-[#F0C040] hover:bg-[rgba(201,150,12,0.1)] transition-colors"
                 onClick={(e) => { e.stopPropagation(); setSelectedImage(selectedImage + 1); }}

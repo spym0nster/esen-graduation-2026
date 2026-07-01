@@ -36,8 +36,17 @@ interface Stats {
   guestsCheckedIn: number;
 }
 
+interface MediaItem {
+  id: string;
+  type: string;
+  url: string;
+  caption: string;
+  author: string;
+  createdAt: string;
+}
+
 type View = "login" | "dashboard";
-type Tab = "students" | "guests";
+type Tab = "students" | "guests" | "gallery" | "wall";
 
 export default function AdminPage() {
   const [view, setView] = useState<View>("login");
@@ -47,6 +56,8 @@ export default function AdminPage() {
 
   const [students, setStudents] = useState<Student[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);
+  const [mediaWall, setMediaWall] = useState<MediaItem[]>([]);
+  const [mediaGallery, setMediaGallery] = useState<MediaItem[]>([]);
   const [tab, setTab] = useState<Tab>("students");
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState("");
@@ -67,9 +78,11 @@ export default function AdminPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, stRes] = await Promise.all([
+      const [sRes, stRes, wRes, gRes] = await Promise.all([
         fetch("/api/admin/attendees"),
         fetch("/api/admin/stats"),
+        fetch("/api/media?type=wall"),
+        fetch("/api/media?type=gallery"),
       ]);
       if (sRes.status === 401 || stRes.status === 401) {
         setView("login");
@@ -80,6 +93,8 @@ export default function AdminPage() {
       setStudents(s || []);
       setGuests(g || []);
       setStats(st);
+      try { setMediaWall((await wRes.json()).items || []); } catch {}
+      try { setMediaGallery((await gRes.json()).items || []); } catch {}
     } finally {
       setLoading(false);
     }
@@ -109,6 +124,8 @@ export default function AdminPage() {
     setPasscode("");
     setStudents([]);
     setGuests([]);
+    setMediaWall([]);
+    setMediaGallery([]);
     setStats(null);
   };
 
@@ -261,6 +278,20 @@ export default function AdminPage() {
           }}>
             📊 Live
           </a>
+          <a href="/ceremony" target="_blank" style={{
+            padding: "8px 16px", borderRadius: 8, background: "#1f2937",
+            border: "1px solid #374151", color: "#9ca3af", fontSize: 13, fontWeight: 600,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            🖥️ Écran
+          </a>
+          <a href="/wall" target="_blank" style={{
+            padding: "8px 16px", borderRadius: 8, background: "#1f2937",
+            border: "1px solid #374151", color: "#9ca3af", fontSize: 13, fontWeight: 600,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            🖼️ Mur
+          </a>
           <a href="/scanner" target="_blank" style={{
             padding: "8px 16px", borderRadius: 8, background: "#1f2937",
             border: "1px solid #374151", color: "#9ca3af", fontSize: 13, fontWeight: 600,
@@ -308,6 +339,8 @@ export default function AdminPage() {
           {([
             { key: "students" as Tab, label: `Étudiants (${students.length})` },
             { key: "guests" as Tab, label: `Accompagnateurs (${guests.length})` },
+            { key: "gallery" as Tab, label: `Galerie (${mediaGallery.length})` },
+            { key: "wall" as Tab, label: `Mur (${mediaWall.length})` },
           ]).map((t) => (
             <button
               key={t.key}
@@ -349,6 +382,10 @@ export default function AdminPage() {
         {/* Table */}
         {loading ? (
           <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>Loading registrations…</div>
+        ) : tab === "gallery" ? (
+          <MediaPanel type="gallery" items={mediaGallery} onChange={fetchData} showToast={showToast} />
+        ) : tab === "wall" ? (
+          <MediaPanel type="wall" items={mediaWall} onChange={fetchData} showToast={showToast} />
         ) : tab === "guests" ? (
           <GuestTable guests={filteredGuests} total={guests.length} search={search} />
         ) : filtered.length === 0 ? (
@@ -477,6 +514,113 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MediaPanel({
+  type, items, onChange, showToast,
+}: {
+  type: "gallery" | "wall";
+  items: MediaItem[];
+  onChange: () => void;
+  showToast: (msg: string, ok: boolean) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const upload = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("Ce n'est pas une image.", false); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("type", "gallery");
+      const res = await fetch("/api/media/upload", { method: "POST", body: fd });
+      if (!res.ok) throw new Error();
+      showToast("Photo ajoutée à la galerie.", true);
+      onChange();
+    } catch {
+      showToast("Échec de l'upload.", false);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Supprimer cette photo ? Elle disparaîtra du site/mur.")) return;
+    setDeleting(id);
+    try {
+      const res = await fetch("/api/admin/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error();
+      showToast("Photo supprimée.", true);
+      onChange();
+    } catch {
+      showToast("Échec de la suppression.", false);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  return (
+    <div>
+      {type === "gallery" && (
+        <div style={{ marginBottom: 20 }}>
+          <label style={{
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8,
+            background: "#1B3A8C", border: "1px solid #F0B429", color: "#fff", fontSize: 14, fontWeight: 600,
+            cursor: uploading ? "wait" : "pointer",
+          }}>
+            {uploading ? "Upload…" : "＋ Ajouter une photo à la galerie"}
+            <input type="file" accept="image/*" disabled={uploading}
+              onChange={(e) => upload(e.target.files?.[0] || null)} style={{ display: "none" }} />
+          </label>
+          <div style={{ color: "#6b7280", fontSize: 12, marginTop: 8 }}>
+            Ces photos apparaissent instantanément dans la galerie du site public.
+          </div>
+        </div>
+      )}
+      {type === "wall" && (
+        <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
+          Souvenirs postés par les étudiants (affichage automatique). Supprime ici tout contenu indésirable.
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>
+          {type === "gallery" ? "Aucune photo dans la galerie." : "Aucun souvenir posté."}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+          {items.map((m) => (
+            <div key={m.id} style={{ position: "relative", background: "#111827", border: "1px solid #1e3a5f", borderRadius: 12, overflow: "hidden" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={m.url} alt={m.caption || "photo"} style={{ width: "100%", height: 150, objectFit: "cover", display: "block" }} />
+              {(m.caption || m.author) && (
+                <div style={{ padding: "8px 10px" }}>
+                  {m.caption && <div style={{ fontSize: 13, color: "#f9fafb", lineHeight: 1.3 }}>{m.caption}</div>}
+                  {m.author && <div style={{ fontSize: 11, color: "#F0B429", marginTop: 2 }}>— {m.author}</div>}
+                </div>
+              )}
+              <button
+                onClick={() => remove(m.id)}
+                disabled={deleting === m.id}
+                title="Supprimer"
+                style={{
+                  position: "absolute", top: 6, right: 6, width: 28, height: 28, borderRadius: 8,
+                  background: "rgba(45,10,10,0.9)", border: "1px solid #f87171", color: "#f87171",
+                  fontSize: 14, fontWeight: 800, cursor: "pointer", lineHeight: 1,
+                }}
+              >{deleting === m.id ? "…" : "✕"}</button>
+            </div>
+          ))}
         </div>
       )}
     </div>
