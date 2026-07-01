@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, Search, Clock, UserCheck, X } from "lucide-react";
 
 type ScanResult = {
   status: string;
@@ -10,8 +10,12 @@ type ScanResult = {
   scannedAt?: string;
 };
 
+type SearchHit = { id: string; name: string; type: string; detail?: string; scanned: boolean };
+type HistoryEntry = { time: string; name: string; type: string; status: string; source: string };
+
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-const RESET_MS = 1400; // how long a result stays before auto-resuming
+const RESET_MS = 1400;
+const HISTORY_KEY = "esen_scan_history";
 
 export default function ScannerPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -21,11 +25,29 @@ export default function ScannerPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wakeLockRef = useRef<any>(null);
 
-  const vibrate = (pattern: number | number[]) => {
-    try { navigator.vibrate?.(pattern); } catch {}
-  };
+  const [showSearch, setShowSearch] = useState(false);
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-  // Resume scanning immediately (used by the auto-timer and by tapping a result).
+  const vibrate = (pattern: number | number[]) => { try { navigator.vibrate?.(pattern); } catch {} };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) setHistory(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const addHistory = useCallback((entry: HistoryEntry) => {
+    setHistory((prev) => {
+      const next = [entry, ...prev].slice(0, 60);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
   const resume = useCallback(() => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
     resetTimer.current = null;
@@ -33,11 +55,39 @@ export default function ScannerPage() {
     scanningRef.current = true;
   }, []);
 
+  // Shared check-in path used by BOTH the camera and the name-search "Allow entry".
+  const submitId = useCallback(async (id: string, source: string) => {
+    try {
+      const res = await fetch("/api/scanner/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data: ScanResult = await res.json();
+      setResult(data);
+      if (data.status === "success") vibrate(120);
+      else if (data.status === "already_scanned") vibrate([60, 50, 60]);
+      else vibrate([200, 80, 200]);
+      const now = new Date();
+      const time = now.toLocaleTimeString("fr-TN", { hour: "2-digit", minute: "2-digit" });
+      addHistory({
+        time,
+        name: data.name || "—",
+        type: data.type || "",
+        status: data.status,
+        source,
+      });
+    } catch {
+      setResult({ status: "error" });
+      vibrate([200, 80, 200]);
+    }
+    resetTimer.current = setTimeout(resume, RESET_MS);
+  }, [addHistory, resume]);
+
   useEffect(() => {
     const scanner = new Html5Qrcode("reader", { verbose: false });
     scannerRef.current = scanner;
 
-    // Keep the screen awake during check-in and re-acquire after tab switches.
     const requestWakeLock = async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,7 +103,6 @@ export default function ScannerPage() {
         { facingMode: "environment" },
         {
           fps: 12,
-          // Scan box sized to the viewport so it works on any phone.
           qrbox: (w: number, h: number) => {
             const size = Math.round(Math.min(w, h) * 0.8);
             return { width: size, height: size };
@@ -63,27 +112,9 @@ export default function ScannerPage() {
         async (decodedText) => {
           if (!scanningRef.current) return;
           scanningRef.current = false;
-
           const match = decodedText.match(UUID_RE);
           const id = match ? match[0] : decodedText;
-
-          try {
-            const res = await fetch("/api/scanner/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id }),
-            });
-            const data: ScanResult = await res.json();
-            setResult(data);
-            if (data.status === "success") vibrate(120);
-            else if (data.status === "already_scanned") vibrate([60, 50, 60]);
-            else vibrate([200, 80, 200]);
-          } catch {
-            setResult({ status: "error" });
-            vibrate([200, 80, 200]);
-          }
-
-          resetTimer.current = setTimeout(resume, RESET_MS);
+          await submitId(id, "Caméra");
         },
         () => {}
       )
@@ -98,7 +129,33 @@ export default function ScannerPage() {
       try { wakeLockRef.current?.release?.(); } catch {}
       scanner.stop().catch(() => {});
     };
-  }, [resume]);
+  }, [submitId]);
+
+  // Debounced name search
+  useEffect(() => {
+    if (!showSearch) return;
+    const q = query.trim();
+    if (q.length < 2) { setHits([]); return; }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/scanner/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setHits(data.results || []);
+      } catch { setHits([]); }
+      finally { setSearching(false); }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query, showSearch]);
+
+  const allowEntry = (hit: SearchHit) => {
+    const msg = hit.scanned
+      ? `${hit.name} est DÉJÀ enregistré(e). Confirmer quand même l'entrée ?`
+      : `Autoriser l'entrée de ${hit.name} ?`;
+    if (!confirm(msg)) return;
+    scanningRef.current = false;
+    submitId(hit.id, "Recherche");
+  };
 
   const ok = result?.status === "success";
   const already = result?.status === "already_scanned";
@@ -112,17 +169,10 @@ export default function ScannerPage() {
 
   const corner = (v: "top" | "bottom", h: "left" | "right"): React.CSSProperties => {
     const s: React.CSSProperties = {
-      position: "absolute",
-      width: 30,
-      height: 30,
-      borderColor: "#F0B429",
-      borderStyle: "solid",
-      borderRadius: 4,
-      pointerEvents: "none",
-      borderTopWidth: v === "top" ? 3 : 0,
-      borderBottomWidth: v === "bottom" ? 3 : 0,
-      borderLeftWidth: h === "left" ? 3 : 0,
-      borderRightWidth: h === "right" ? 3 : 0,
+      position: "absolute", width: 30, height: 30, borderColor: "#F0B429",
+      borderStyle: "solid", borderRadius: 4, pointerEvents: "none",
+      borderTopWidth: v === "top" ? 3 : 0, borderBottomWidth: v === "bottom" ? 3 : 0,
+      borderLeftWidth: h === "left" ? 3 : 0, borderRightWidth: h === "right" ? 3 : 0,
     };
     if (v === "top") s.top = 14; else s.bottom = 14;
     if (h === "left") s.left = 14; else s.right = 14;
@@ -135,17 +185,14 @@ export default function ScannerPage() {
         minHeight: "100dvh",
         background: "linear-gradient(135deg, #0A1A4A 0%, #0F2560 50%, #1C0F06 100%)",
         color: "#F5ECD7",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+        display: "flex", flexDirection: "column", alignItems: "center",
         padding: "max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom))",
         fontFamily: "Arial, Helvetica, sans-serif",
-        WebkitTapHighlightColor: "transparent",
-        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent", touchAction: "manipulation",
       }}
     >
-      {/* Header (compact on phones) */}
-      <div style={{ textAlign: "center", marginBottom: 18 }}>
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
         <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, color: "#FFFFFF", fontSize: 22, letterSpacing: 5 }}>ESEN</div>
         <div style={{ color: "#F0B429", fontSize: 9, letterSpacing: 3, marginTop: 5 }}>GRADUATION 2026</div>
         <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#FFFFFF", fontSize: 19, fontWeight: 700, marginTop: 12 }}>
@@ -154,64 +201,44 @@ export default function ScannerPage() {
         <div style={{ width: 56, height: 2, background: "linear-gradient(90deg,#1B3A8C,#F0B429,#1B3A8C)", margin: "10px auto 0" }} />
       </div>
 
-      {/* Camera frame — tap to scan the next person immediately */}
+      {/* Camera frame */}
       <div
         onClick={() => { if (result) resume(); }}
         className="relative w-full"
         style={{
-          maxWidth: "min(96vw, 540px)",
-          aspectRatio: "1 / 1",
-          borderRadius: 20,
-          overflow: "hidden",
-          border: "1px solid rgba(240,180,41,0.35)",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
-          background: "#06102e",
+          maxWidth: "min(96vw, 540px)", aspectRatio: "1 / 1", borderRadius: 20,
+          overflow: "hidden", border: "1px solid rgba(240,180,41,0.35)",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.5)", background: "#06102e",
           cursor: result ? "pointer" : "default",
         }}
       >
         <div id="reader" style={{ width: "100%", height: "100%" }} />
-
         <div style={corner("top", "left")} />
         <div style={corner("top", "right")} />
         <div style={corner("bottom", "left")} />
         <div style={corner("bottom", "right")} />
 
         {!result && (
-          <div
-            className="scan-line"
-            style={{
-              position: "absolute",
-              left: "8%",
-              right: "8%",
-              height: 2,
-              background: "linear-gradient(90deg, transparent, #F0B429, transparent)",
-              boxShadow: "0 0 12px rgba(240,180,41,0.8)",
-              pointerEvents: "none",
-            }}
-          />
+          <div className="scan-line" style={{
+            position: "absolute", left: "8%", right: "8%", height: 2,
+            background: "linear-gradient(90deg, transparent, #F0B429, transparent)",
+            boxShadow: "0 0 12px rgba(240,180,41,0.8)", pointerEvents: "none",
+          }} />
         )}
 
         {result && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              textAlign: "center",
-              padding: 24,
-              background: cameraError ? "linear-gradient(135deg,#3a1414,#5a0f0f)" : state.bg,
-              border: `2px solid ${cameraError ? "rgba(248,113,113,0.6)" : state.border}`,
-            }}
-          >
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24,
+            background: cameraError ? "linear-gradient(135deg,#3a1414,#5a0f0f)" : state.bg,
+            border: `2px solid ${cameraError ? "rgba(248,113,113,0.6)" : state.border}`,
+          }}>
             {cameraError ? (
               <>
                 <XCircle size={64} color="#F87171" style={{ marginBottom: 14 }} />
                 <div style={{ fontSize: 18, fontWeight: 800, color: "#FFF" }}>CAMÉRA INDISPONIBLE</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", marginTop: 10 }}>
-                  Autorisez la caméra puis rechargez la page.
+                  Utilisez la recherche par nom ci-dessous.
                 </div>
               </>
             ) : (
@@ -225,9 +252,7 @@ export default function ScannerPage() {
                     Premier scan : {new Date(result.scannedAt).toLocaleString()}
                   </div>
                 )}
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 16, letterSpacing: 1 }}>
-                  Touchez pour continuer
-                </div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 16, letterSpacing: 1 }}>Touchez pour continuer</div>
               </>
             )}
           </div>
@@ -235,7 +260,7 @@ export default function ScannerPage() {
       </div>
 
       {/* Status hint */}
-      <div style={{ marginTop: 20, textAlign: "center", minHeight: 20 }}>
+      <div style={{ marginTop: 16, textAlign: "center", minHeight: 20 }}>
         {!result ? (
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#F0B429", fontSize: 13, letterSpacing: 1 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34D399", boxShadow: "0 0 8px #34D399", display: "inline-block" }} />
@@ -246,22 +271,115 @@ export default function ScannerPage() {
         )}
       </div>
 
+      {/* Actions panel */}
+      <div style={{ width: "100%", maxWidth: "min(96vw, 540px)", marginTop: 18 }}>
+        <button
+          onClick={() => setShowSearch((v) => !v)}
+          style={{
+            width: "100%", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+            background: showSearch ? "#1B3A8C" : "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(240,180,41,0.45)", color: "#F5ECD7",
+            fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center",
+            justifyContent: "center", gap: 8,
+          }}
+        >
+          <Search size={18} /> Le QR ne marche pas ? Rechercher par nom
+        </button>
+
+        {showSearch && (
+          <div style={{ marginTop: 12 }}>
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nom de l'étudiant…"
+              style={{
+                width: "100%", padding: "13px 16px", borderRadius: 10, boxSizing: "border-box",
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(240,180,41,0.35)",
+                color: "#F5ECD7", fontSize: 16, outline: "none",
+              }}
+            />
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {searching && <div style={{ color: "rgba(245,236,215,0.6)", fontSize: 13, textAlign: "center", padding: 8 }}>Recherche…</div>}
+              {!searching && query.trim().length >= 2 && hits.length === 0 && (
+                <div style={{ color: "rgba(245,236,215,0.6)", fontSize: 13, textAlign: "center", padding: 8 }}>Aucun résultat.</div>
+              )}
+              {hits.map((h) => (
+                <div key={h.id} style={{
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center",
+                  justifyContent: "space-between", gap: 10,
+                }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#FFF", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
+                    <div style={{ fontSize: 12, color: "rgba(245,236,215,0.6)", marginTop: 2 }}>
+                      {h.type}{h.detail ? ` · ${h.detail}` : ""}
+                      {h.scanned && <span style={{ color: "#F0B429", fontWeight: 700 }}> · déjà entré</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => allowEntry(h)}
+                    style={{
+                      flexShrink: 0, padding: "10px 14px", borderRadius: 10, cursor: "pointer",
+                      background: h.scanned ? "rgba(240,180,41,0.15)" : "linear-gradient(135deg,#0c4a2b,#0a7a3c)",
+                      border: `1px solid ${h.scanned ? "rgba(240,180,41,0.6)" : "rgba(52,211,153,0.7)"}`,
+                      color: "#FFF", fontSize: 13, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6,
+                    }}
+                  >
+                    <UserCheck size={16} /> Entrée
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Scan history */}
+      {history.length > 0 && (
+        <div style={{ width: "100%", maxWidth: "min(96vw, 540px)", marginTop: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#F0B429", fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
+              <Clock size={16} /> Historique ({history.length})
+            </div>
+            <button
+              onClick={() => { if (confirm("Effacer l'historique de cet appareil ?")) { setHistory([]); try { localStorage.removeItem(HISTORY_KEY); } catch {} } }}
+              style={{ background: "none", border: "none", color: "rgba(245,236,215,0.5)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+            >
+              <X size={13} /> Effacer
+            </button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {history.map((h, i) => {
+              const good = h.status === "success";
+              const warn = h.status === "already_scanned";
+              const col = good ? "#34D399" : warn ? "#F0B429" : "#F87171";
+              const icon = good ? "✓" : warn ? "!" : "✕";
+              return (
+                <div key={i} style={{
+                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <span style={{ color: "rgba(245,236,215,0.55)", fontSize: 12, fontVariantNumeric: "tabular-nums", width: 42 }}>{h.time}</span>
+                  <span style={{ color: col, fontWeight: 800, fontSize: 14, width: 14, textAlign: "center" }}>{icon}</span>
+                  <span style={{ flex: 1, minWidth: 0, color: "#F5ECD7", fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.name}</span>
+                  <span style={{ color: "rgba(245,236,215,0.5)", fontSize: 11, whiteSpace: "nowrap" }}>{h.type}{h.source === "Recherche" ? " · manuel" : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ESEN Ambassadors logo */}
       <a
         href="https://www.instagram.com/esen.ambassadors/"
-        target="_blank"
-        rel="noopener noreferrer"
+        target="_blank" rel="noopener noreferrer"
         style={{ marginTop: "auto", paddingTop: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textDecoration: "none" }}
       >
         <div style={{ background: "#fff", borderRadius: 16, padding: 9, boxShadow: "0 0 24px rgba(27,58,140,0.25)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/images/logos/ambassadors.png"
-            alt="ESEN Ambassadors"
-            width={48}
-            height={48}
-            style={{ display: "block", width: 48, height: 48, objectFit: "contain" }}
-          />
+          <img src="/images/logos/ambassadors.png" alt="ESEN Ambassadors" width={48} height={48} style={{ display: "block", width: 48, height: 48, objectFit: "contain" }} />
         </div>
         <span style={{ color: "rgba(240,180,41,0.55)", fontSize: 9, letterSpacing: 2, textTransform: "uppercase" }}>ESEN Ambassadors</span>
       </a>
