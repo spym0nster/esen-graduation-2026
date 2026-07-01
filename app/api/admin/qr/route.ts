@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStudentById } from "@/lib/rsvpService";
 import QRCode from "qrcode";
-import { cookies } from "next/headers";
+import { isAdmin } from "@/lib/adminAuth";
 
 export const runtime = 'nodejs';
-
-async function isAuthed() {
-  const cookieStore = await cookies();
-  return cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSCODE;
-}
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation-2026.vercel.app";
 
 export async function GET(req: NextRequest) {
-  if (!await isAuthed()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isAdmin()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const studentId = searchParams.get("studentId");

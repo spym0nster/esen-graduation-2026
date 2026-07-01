@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStudentById, updateStudent } from "@/lib/rsvpService";
 import { sendEmail } from "@/lib/emailService";
-import { cookies } from "next/headers";
+import { isAdmin } from "@/lib/adminAuth";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
 
 export const runtime = 'nodejs';
 
-async function isAuthed() {
-  const cookieStore = await cookies();
-  return cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSCODE;
-}
-
 export async function POST(req: NextRequest) {
-  if (!await isAuthed()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isAdmin()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { studentId } = await req.json();
   if (!studentId) return NextResponse.json({ error: "Missing studentId" }, { status: 400 });

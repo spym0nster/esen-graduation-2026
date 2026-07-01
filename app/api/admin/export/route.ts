@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllStudents } from "@/lib/rsvpService";
 import * as XLSX from "xlsx";
-import { cookies } from "next/headers";
+import { isAdmin } from "@/lib/adminAuth";
 
 export const runtime = 'nodejs';
 
-async function isAuthed() {
-  const cookieStore = await cookies();
-  return cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSCODE;
-}
-
 export async function GET(req: NextRequest) {
-  if (!await isAuthed()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isAdmin()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const format = searchParams.get("format") || "csv";

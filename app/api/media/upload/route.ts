@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import { cookies } from "next/headers";
+import { isAdmin } from "@/lib/adminAuth";
 import { addMedia, MediaType } from "@/lib/media";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -26,11 +26,8 @@ export async function POST(req: Request) {
 
     // The public "Digital Wall" (students) is open. The "Live Gallery"
     // (committee) requires the admin passcode cookie.
-    if (type === "gallery") {
-      const c = await cookies();
-      if (c.get("admin_auth")?.value !== process.env.ADMIN_PASSCODE) {
-        return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-      }
+    if (type === "gallery" && !(await isAdmin())) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
