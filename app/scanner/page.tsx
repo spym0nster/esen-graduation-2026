@@ -335,20 +335,30 @@ export default function ScannerPage() {
         )}
       </div>
 
-      {/* Scan history */}
-      {history.length > 0 && (
-        <div style={{ width: "100%", maxWidth: "min(96vw, 540px)", marginTop: 24 }}>
+      {/* Scan history (always visible) */}
+      <div style={{ width: "100%", maxWidth: "min(96vw, 540px)", marginTop: 24 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#F0B429", fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
               <Clock size={16} /> Historique ({history.length})
             </div>
-            <button
-              onClick={() => { if (confirm("Effacer l'historique de cet appareil ?")) { setHistory([]); try { localStorage.removeItem(HISTORY_KEY); } catch {} } }}
-              style={{ background: "none", border: "none", color: "rgba(245,236,215,0.5)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
-            >
-              <X size={13} /> Effacer
-            </button>
+            {history.length > 0 && (
+              <button
+                onClick={() => { if (confirm("Effacer l'historique de cet appareil ?")) { setHistory([]); try { localStorage.removeItem(HISTORY_KEY); } catch {} } }}
+                style={{ background: "none", border: "none", color: "rgba(245,236,215,0.5)", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+              >
+                <X size={13} /> Effacer
+              </button>
+            )}
           </div>
+          {history.length === 0 ? (
+            <div style={{
+              background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)",
+              borderRadius: 10, padding: "18px 12px", textAlign: "center",
+              color: "rgba(245,236,215,0.5)", fontSize: 13,
+            }}>
+              Aucun scan pour l&apos;instant — les entrées apparaîtront ici.
+            </div>
+          ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {history.map((h, i) => {
               const good = h.status === "success";
@@ -368,8 +378,8 @@ export default function ScannerPage() {
               );
             })}
           </div>
-        </div>
-      )}
+          )}
+      </div>
 
       {/* ESEN Ambassadors logo */}
       <a
