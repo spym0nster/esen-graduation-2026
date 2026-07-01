@@ -249,6 +249,16 @@ export async function updateGuest(guest: StoredGuest): Promise<void> {
   await sheetUpdateRow("Guests", guest._rowIndex, guestToRow(guest));
 }
 
+export async function getAllGuests(): Promise<StoredGuest[]> {
+  const rows = await sheetGetRows("Guests");
+  if (rows.length <= 1) return [];
+  return rows
+    .slice(1)
+    .filter((row) => row[G.guestId])
+    // row at array index i (0-based, after slice) → sheet row i + 2
+    .map((row, i) => rowToGuest(row, i + 2));
+}
+
 export async function getGuestsForStudent(guestIds: string[]): Promise<StoredGuest[]> {
   if (!guestIds || guestIds.length === 0) return [];
   const rows = await sheetGetRows("Guests");

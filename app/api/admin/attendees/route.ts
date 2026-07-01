@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllStudents, deleteStudent } from "@/lib/rsvpService";
+import { getAllStudents, getAllGuests, deleteStudent } from "@/lib/rsvpService";
 import { cookies } from "next/headers";
 
 export const runtime = 'nodejs';
@@ -12,8 +12,8 @@ async function isAuthed() {
 export async function GET() {
   if (!await isAuthed()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const students = await getAllStudents();
-  return NextResponse.json({ students });
+  const [students, guests] = await Promise.all([getAllStudents(), getAllGuests()]);
+  return NextResponse.json({ students, guests });
 }
 
 export async function DELETE(req: NextRequest) {

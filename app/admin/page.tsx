@@ -19,6 +19,15 @@ interface Student {
   registeredAt: string;
 }
 
+interface Guest {
+  id: string;
+  guestIndex: number;
+  parentId: string;
+  parentName: string;
+  scanned: boolean;
+  scannedAt?: string | null;
+}
+
 interface Stats {
   totalStudents: number;
   totalGuests: number;
@@ -28,6 +37,7 @@ interface Stats {
 }
 
 type View = "login" | "dashboard";
+type Tab = "students" | "guests";
 
 export default function AdminPage() {
   const [view, setView] = useState<View>("login");
@@ -36,6 +46,8 @@ export default function AdminPage() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [students, setStudents] = useState<Student[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [tab, setTab] = useState<Tab>("students");
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,9 +75,10 @@ export default function AdminPage() {
         setView("login");
         return;
       }
-      const { students: s } = await sRes.json();
+      const { students: s, guests: g } = await sRes.json();
       const st = await stRes.json();
       setStudents(s || []);
+      setGuests(g || []);
       setStats(st);
     } finally {
       setLoading(false);
@@ -95,6 +108,7 @@ export default function AdminPage() {
     setView("login");
     setPasscode("");
     setStudents([]);
+    setGuests([]);
     setStats(null);
   };
 
@@ -151,6 +165,14 @@ export default function AdminPage() {
       s.phone.toLowerCase().includes(q) ||
       s.classe.toLowerCase().includes(q) ||
       s.specialty.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredGuests = guests.filter((g) => {
+    const q = search.toLowerCase();
+    return (
+      g.parentName.toLowerCase().includes(q) ||
+      String(g.guestIndex).includes(q)
     );
   });
 
@@ -232,6 +254,13 @@ export default function AdminPage() {
           <div style={{ fontSize: 20, fontWeight: 700, color: "#fff" }}>Admin Dashboard</div>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <a href="/admin/live" target="_blank" style={{
+            padding: "8px 16px", borderRadius: 8, background: "#1e2a00",
+            border: "1px solid #F0B429", color: "#F0B429", fontSize: 13, fontWeight: 600,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            📊 Live
+          </a>
           <a href="/scanner" target="_blank" style={{
             padding: "8px 16px", borderRadius: 8, background: "#1f2937",
             border: "1px solid #374151", color: "#9ca3af", fontSize: 13, fontWeight: 600,
@@ -274,6 +303,25 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {([
+            { key: "students" as Tab, label: `Étudiants (${students.length})` },
+            { key: "guests" as Tab, label: `Accompagnateurs (${guests.length})` },
+          ]).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                background: tab === t.key ? "#1B3A8C" : "#111827",
+                border: `1px solid ${tab === t.key ? "#F0B429" : "#1e3a5f"}`,
+                color: tab === t.key ? "#fff" : "#9ca3af",
+              }}
+            >{t.label}</button>
+          ))}
+        </div>
+
         {/* Toolbar */}
         <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
           <input
@@ -301,6 +349,8 @@ export default function AdminPage() {
         {/* Table */}
         {loading ? (
           <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>Loading registrations…</div>
+        ) : tab === "guests" ? (
+          <GuestTable guests={filteredGuests} total={guests.length} search={search} />
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>
             {search ? "No results found." : "No registrations yet."}
@@ -429,6 +479,53 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function GuestTable({ guests, total, search }: { guests: Guest[]; total: number; search: string }) {
+  if (guests.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>
+        {search ? "Aucun accompagnateur trouvé." : "Aucun accompagnateur."}
+      </div>
+    );
+  }
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <thead>
+          <tr style={{ background: "#111827", borderBottom: "2px solid #1e3a5f" }}>
+            {["Accompagnateur", "Étudiant", "N°", "Check-in", "Scanné le"].map((h) => (
+              <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#9ca3af", fontWeight: 600, fontSize: 11, letterSpacing: 1, whiteSpace: "nowrap" }}>
+                {h.toUpperCase()}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {guests.map((g, i) => (
+            <tr key={g.id} style={{ background: i % 2 === 0 ? "#0d1526" : "#0a0f1e", borderBottom: "1px solid #1e2a3f" }}>
+              <td style={{ padding: "12px 16px", fontWeight: 600, color: "#f9fafb", whiteSpace: "nowrap" }}>
+                Accompagnateur n°{g.guestIndex} de {g.parentName}
+              </td>
+              <td style={{ padding: "12px 16px", color: "#9ca3af", whiteSpace: "nowrap" }}>{g.parentName}</td>
+              <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 20, background: "#1e3a5f", color: "#60a5fa", fontSize: 12, fontWeight: 700 }}>{g.guestIndex}</span>
+              </td>
+              <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                <StatusBadge ok={g.scanned} label={g.scanned ? "Checked In" : "Pending"} />
+              </td>
+              <td style={{ padding: "12px 16px", color: "#6b7280", whiteSpace: "nowrap", fontSize: 12 }}>
+                {g.scannedAt ? new Date(g.scannedAt).toLocaleString("fr-TN") : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ padding: "12px 16px", color: "#6b7280", fontSize: 13 }}>
+        Showing {guests.length} of {total} accompagnateur{total !== 1 ? "s" : ""}
+      </div>
     </div>
   );
 }
