@@ -5,9 +5,13 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 export async function appendGuestRows(
   studentId: string,
   parentName: string,
-  guestIds: string[]
+  guestIds: string[],
+  scanned = false
 ): Promise<void> {
   if (guestIds.length === 0) return;
+
+  const scannedVal = scanned ? 'TRUE' : 'FALSE';
+  const scannedAt = scanned ? new Date().toISOString() : '';
 
   // Normalized Guests layout: [id, parentName, guestIndex, parentId, scanned, scannedAt].
   // Column G ("Accompagnateur") is a sheet ARRAYFORMULA and is not written here.
@@ -16,8 +20,8 @@ export async function appendGuestRows(
     parentName,
     String(index + 1),
     studentId,
-    'FALSE',
-    '',
+    scannedVal,
+    scannedAt,
   ]);
 
   const accessToken = await getGoogleAccessToken();

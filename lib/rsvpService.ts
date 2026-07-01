@@ -46,7 +46,7 @@ export interface StoredStudent {
   registeredAt: string;
   scanned: boolean;
   scannedAt?: string | null;
-  emailStatus: "Pending" | "Sent" | "Failed";
+  emailStatus: "Pending" | "Sent" | "Failed" | "Walk-in";
   qrId: string;
   _rowIndex?: number; // internal — sheet row number (1-based)
 }
