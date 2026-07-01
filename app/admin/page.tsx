@@ -271,6 +271,13 @@ export default function AdminPage() {
           <div style={{ fontSize: 20, fontWeight: 700, color: "#fff" }}>Admin Dashboard</div>
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <a href="/admin/analytics" target="_blank" style={{
+            padding: "8px 16px", borderRadius: 8, background: "#1e2a00",
+            border: "1px solid #F0B429", color: "#F0B429", fontSize: 13, fontWeight: 600,
+            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            📈 Analytics
+          </a>
           <a href="/admin/live" target="_blank" style={{
             padding: "8px 16px", borderRadius: 8, background: "#1e2a00",
             border: "1px solid #F0B429", color: "#F0B429", fontSize: 13, fontWeight: 600,
