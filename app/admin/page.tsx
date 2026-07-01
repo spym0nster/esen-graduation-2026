@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 
 interface Student {
@@ -62,6 +62,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const [modalStudent, setModalStudent] = useState<Student | null>(null);
   const [modalQRs, setModalQRs] = useState<{ studentQR: string; guestQRs: string[] } | null>(null);
@@ -69,6 +71,8 @@ export default function AdminPage() {
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  useEffect(() => { setPage(1); }, [tab, search]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -394,7 +398,15 @@ export default function AdminPage() {
         ) : tab === "wall" ? (
           <MediaPanel type="wall" items={mediaWall} onChange={fetchData} showToast={showToast} />
         ) : tab === "guests" ? (
-          <GuestTable guests={filteredGuests} total={guests.length} search={search} />
+          <>
+            <GuestTable
+              guests={filteredGuests.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
+              total={filteredGuests.length}
+              rangeStart={(page - 1) * PAGE_SIZE}
+              search={search}
+            />
+            <Pagination total={filteredGuests.length} page={page} pageSize={PAGE_SIZE} onPage={setPage} />
+          </>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>
             {search ? "No results found." : "No registrations yet."}
@@ -412,7 +424,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((s, i) => (
+                {filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((s, i) => (
                   <tr key={s.id} style={{ background: i % 2 === 0 ? "#0d1526" : "#0a0f1e", borderBottom: "1px solid #1e2a3f" }}>
                     <td style={{ padding: "12px 16px", fontWeight: 600, color: "#f9fafb", whiteSpace: "nowrap" }}>
                       {s.firstName} {s.lastName}
@@ -462,8 +474,10 @@ export default function AdminPage() {
               </tbody>
             </table>
             <div style={{ padding: "12px 16px", color: "#6b7280", fontSize: 13 }}>
-              Showing {filtered.length} of {students.length} registration{students.length !== 1 ? "s" : ""}
+              {filtered.length === 0 ? "0" : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)}`} sur {filtered.length}
+              {search ? ` (filtré de ${students.length})` : ""}
             </div>
+            <Pagination total={filtered.length} page={page} pageSize={PAGE_SIZE} onPage={setPage} />
           </div>
         )}
       </main>
@@ -634,8 +648,35 @@ function MediaPanel({
   );
 }
 
-function GuestTable({ guests, total, search }: { guests: Guest[]; total: number; search: string }) {
-  if (guests.length === 0) {
+function Pagination({ total, page, pageSize, onPage }: { total: number; page: number; pageSize: number; onPage: (p: number) => void }) {
+  const pages = Math.ceil(total / pageSize);
+  if (pages <= 1) return null;
+  const nums = Array.from({ length: pages }, (_, i) => i + 1);
+  const btn = (label: string, p: number, active: boolean, disabled = false) => (
+    <button
+      key={label}
+      onClick={() => !disabled && onPage(p)}
+      disabled={disabled}
+      style={{
+        padding: "7px 12px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: active ? "#1B3A8C" : "#111827",
+        border: `1px solid ${active ? "#F0B429" : "#1e3a5f"}`,
+        color: disabled ? "#4b5563" : active ? "#fff" : "#9ca3af",
+      }}
+    >{label}</button>
+  );
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", padding: "8px 16px 4px" }}>
+      {btn("‹ Préc.", page - 1, false, page <= 1)}
+      {nums.map((n) => btn(`${(n - 1) * pageSize + 1}–${Math.min(n * pageSize, total)}`, n, n === page))}
+      {btn("Suiv. ›", page + 1, false, page >= pages)}
+    </div>
+  );
+}
+
+function GuestTable({ guests, total, rangeStart = 0, search }: { guests: Guest[]; total: number; rangeStart?: number; search: string }) {
+  if (total === 0) {
     return (
       <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>
         {search ? "Aucun accompagnateur trouvé." : "Aucun accompagnateur."}
@@ -675,7 +716,7 @@ function GuestTable({ guests, total, search }: { guests: Guest[]; total: number;
         </tbody>
       </table>
       <div style={{ padding: "12px 16px", color: "#6b7280", fontSize: 13 }}>
-        Showing {guests.length} of {total} accompagnateur{total !== 1 ? "s" : ""}
+        {rangeStart + 1}–{rangeStart + guests.length} sur {total} accompagnateur{total !== 1 ? "s" : ""}
       </div>
     </div>
   );
