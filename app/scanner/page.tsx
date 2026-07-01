@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { CheckCircle, AlertTriangle, XCircle, Search, UserCheck, UserPlus } from "lucide-react";
-import { VALID_CLASSES, VALID_SPECIALTIES } from "@/lib/rsvp";
 
 type ScanResult = {
   status: string;
@@ -28,14 +27,6 @@ export default function ScannerPage() {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
-
-  const [showWalkin, setShowWalkin] = useState(false);
-  const [wFirst, setWFirst] = useState("");
-  const [wLast, setWLast] = useState("");
-  const [wClasse, setWClasse] = useState("");
-  const [wSpec, setWSpec] = useState("");
-  const [wGuests, setWGuests] = useState(0);
-  const [wBusy, setWBusy] = useState(false);
 
   const vibrate = (pattern: number | number[]) => { try { navigator.vibrate?.(pattern); } catch {} };
 
@@ -139,35 +130,6 @@ export default function ScannerPage() {
     submitId(hit.id);
   };
 
-  const walkinSubmit = async () => {
-    if (!wFirst.trim() || !wLast.trim()) return;
-    if (!confirm(`Admettre ${wFirst} ${wLast}${wGuests > 0 ? ` + ${wGuests} invité(s)` : ""} (sans inscription) ?`)) return;
-    setWBusy(true);
-    scanningRef.current = false;
-    try {
-      const res = await fetch("/api/scanner/walkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName: wFirst, lastName: wLast, classe: wClasse, specialty: wSpec, guestCount: wGuests }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setResult({ status: "success", name: data.name, type: wGuests > 0 ? `Walk-in · +${wGuests} invité(s)` : "Walk-in" });
-        vibrate(120);
-        setWFirst(""); setWLast(""); setWClasse(""); setWSpec(""); setWGuests(0); setShowWalkin(false);
-      } else {
-        setResult({ status: "invalid", name: data.error === "name_required" ? "Nom requis" : "Échec" });
-        vibrate([200, 80, 200]);
-      }
-    } catch {
-      setResult({ status: "error" });
-      vibrate([200, 80, 200]);
-    } finally {
-      setWBusy(false);
-      resetTimer.current = setTimeout(resume, RESET_MS);
-    }
-  };
-
   const ok = result?.status === "success";
   const already = result?.status === "already_scanned";
   const cameraError = result?.status === "camera_error";
@@ -177,12 +139,6 @@ export default function ScannerPage() {
     : already
     ? { Icon: AlertTriangle, color: "#F0B429", label: "DÉJÀ SCANNÉ", bg: "linear-gradient(135deg,#5a4410,#7a5c0f)", border: "rgba(240,180,41,0.6)" }
     : { Icon: XCircle, color: "#F87171", label: "CODE INVALIDE", bg: "linear-gradient(135deg,#5a1414,#7a0f0f)", border: "rgba(248,113,113,0.6)" };
-
-  const wInput: React.CSSProperties = {
-    flex: 1, minWidth: 0, padding: "12px 12px", borderRadius: 10, boxSizing: "border-box",
-    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(240,180,41,0.3)",
-    color: "#F5ECD7", fontSize: 15, outline: "none",
-  };
 
   const corner = (v: "top" | "bottom", h: "left" | "right"): React.CSSProperties => {
     const s: React.CSSProperties = {
@@ -352,57 +308,21 @@ export default function ScannerPage() {
         )}
       </div>
 
-      {/* Walk-in (never registered) */}
+      {/* Walk-in (never registered) — opens the full form in a new tab */}
       <div style={{ width: "100%", maxWidth: "min(96vw, 540px)", marginTop: 12 }}>
-        <button
-          onClick={() => setShowWalkin((v) => !v)}
+        <a
+          href="/scanner/walkin"
+          target="_blank"
+          rel="noopener noreferrer"
           style={{
-            width: "100%", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
-            background: showWalkin ? "#5a4410" : "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(240,180,41,0.45)", color: "#F5ECD7",
-            fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center",
-            justifyContent: "center", gap: 8,
+            width: "100%", boxSizing: "border-box", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(240,180,41,0.45)",
+            color: "#F5ECD7", fontSize: 15, fontWeight: 700, display: "flex", alignItems: "center",
+            justifyContent: "center", gap: 8, textDecoration: "none",
           }}
         >
           <UserPlus size={18} /> Nouvel arrivant (sans inscription)
-        </button>
-
-        {showWalkin && (
-          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", gap: 10 }}>
-              <input value={wFirst} onChange={(e) => setWFirst(e.target.value)} placeholder="Prénom *" style={wInput} maxLength={60} />
-              <input value={wLast} onChange={(e) => setWLast(e.target.value)} placeholder="Nom *" style={wInput} maxLength={60} />
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <select value={wClasse} onChange={(e) => setWClasse(e.target.value)} style={wInput}>
-                <option value="">Classe (opt.)</option>
-                {VALID_CLASSES.map((c) => <option key={c} value={c} style={{ background: "#0F2560" }}>{c}</option>)}
-              </select>
-              <select value={wSpec} onChange={(e) => setWSpec(e.target.value)} style={wInput}>
-                <option value="">Spécialité (opt.)</option>
-                {VALID_SPECIALTIES.map((s) => <option key={s} value={s} style={{ background: "#0F2560" }}>{s}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 14, color: "rgba(245,236,215,0.8)" }}>Invités :</span>
-              <select value={wGuests} onChange={(e) => setWGuests(Number(e.target.value))} style={{ ...wInput, flex: "0 0 90px" }}>
-                {[0, 1, 2, 3].map((n) => <option key={n} value={n} style={{ background: "#0F2560" }}>{n}</option>)}
-              </select>
-            </div>
-            <button
-              onClick={walkinSubmit}
-              disabled={wBusy || !wFirst.trim() || !wLast.trim()}
-              style={{
-                padding: "14px 0", borderRadius: 12,
-                background: (!wFirst.trim() || !wLast.trim()) ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg,#0c4a2b,#0a7a3c)",
-                border: "1px solid rgba(52,211,153,0.7)", color: "#fff", fontSize: 16, fontWeight: 700,
-                cursor: wBusy ? "wait" : "pointer",
-              }}
-            >
-              {wBusy ? "Admission…" : "✓ Admettre"}
-            </button>
-          </div>
-        )}
+        </a>
       </div>
 
       {/* ESEN Ambassadors logo */}

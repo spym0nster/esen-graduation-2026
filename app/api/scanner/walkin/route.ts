@@ -11,6 +11,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const firstName = String(body.firstName || "").trim().slice(0, 60);
     const lastName = String(body.lastName || "").trim().slice(0, 60);
+    const email = String(body.email || "").trim().slice(0, 120);
+    const phone = String(body.phone || "").trim().slice(0, 30);
     const classe = String(body.classe || "").trim().slice(0, 20);
     const specialty = String(body.specialty || "").trim().slice(0, 60);
     const guestCount = Math.max(0, Math.min(3, parseInt(String(body.guestCount ?? "0"), 10) || 0));
@@ -28,8 +30,8 @@ export async function POST(req: Request) {
       id: studentId,
       firstName,
       lastName,
-      email: "",
-      phone: "",
+      email,
+      phone,
       classe,
       specialty,
       guestCount,
