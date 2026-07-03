@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { programmeItems } from "@/data/programme";
+import { useCountUp } from "@/components/ui/useCountUp";
+import { useCelebrate } from "@/components/ui/useCelebrate";
+import { fireConfetti } from "@/lib/celebrate";
 
 interface Stats {
   totalStudents: number;
@@ -47,6 +50,13 @@ export default function CeremonyScreen() {
     return () => { if (statsTimer.current) clearInterval(statsTimer.current); };
   }, []);
 
+  // Demo: press "C" to preview the confetti celebration.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key.toLowerCase() === "c") fireConfetti(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const diff = Math.max(0, TARGET - now);
   const started = diff === 0;
   const cd = {
@@ -68,6 +78,10 @@ export default function CeremonyScreen() {
 
   const studentsIn = stats?.studentsCheckedIn ?? 0;
   const guestsIn = stats?.guestsCheckedIn ?? 0;
+  const inside = studentsIn + guestsIn;
+  const totalExpected = stats?.totalExpected ?? 0;
+  const full = totalExpected > 0 && inside >= totalExpected;
+  const banner = useCelebrate(inside, full);
 
   return (
     <div style={{
@@ -78,6 +92,18 @@ export default function CeremonyScreen() {
       padding: "clamp(18px, 2.5vw, 40px)",
       display: "flex", flexDirection: "column", gap: "clamp(14px, 2vw, 28px)",
     }}>
+      <style>{`
+        @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+        @keyframes celebPop { 0%{transform:translateX(-50%) scale(0.6);opacity:0} 55%{transform:translateX(-50%) scale(1.08);opacity:1} 100%{transform:translateX(-50%) scale(1);opacity:1} }
+      `}</style>
+      {banner && (
+        <div style={{
+          position: "fixed", top: "10%", left: "50%", transform: "translateX(-50%)", zIndex: 100000,
+          background: "linear-gradient(135deg,#F0B429,#FFD166)", color: "#0A1A4A",
+          padding: "18px 40px", borderRadius: 18, fontSize: "clamp(20px,3.4vw,40px)", fontWeight: 800,
+          boxShadow: "0 24px 70px rgba(0,0,0,0.55)", animation: "celebPop 0.5s ease", whiteSpace: "nowrap",
+        }}>{banner}</div>
+      )}
       {/* Top bar: brand + live clock */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
@@ -195,6 +221,7 @@ export default function CeremonyScreen() {
 }
 
 function StatTile({ label, value, accent, big }: { label: string; value: number; accent: string; big?: boolean }) {
+  const v = useCountUp(value);
   return (
     <div style={{
       background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)",
@@ -204,7 +231,8 @@ function StatTile({ label, value, accent, big }: { label: string; value: number;
       <div style={{
         fontFamily: "Georgia, serif", fontWeight: 800, color: "#fff", lineHeight: 1,
         fontSize: big ? "clamp(48px,6vw,104px)" : "clamp(40px,5vw,84px)",
-      }}>{value}</div>
+        animation: big ? "breathe 3.6s ease-in-out infinite" : undefined, transformOrigin: "left center",
+      }}>{v}</div>
     </div>
   );
 }
