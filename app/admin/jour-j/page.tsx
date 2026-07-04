@@ -11,7 +11,7 @@ Chart.register(...registerables);
 interface Student { id: string; classe: string; specialty: string; guestCount: number; scanned: boolean; emailStatus: string }
 interface Guest { id: string; parentId: string; scanned: boolean }
 
-const CORDER = ["L1", "L2", "L3", "M1", "M2"];
+const CORDER = ["L1", "L2", "L3", "M1", "M2", "Autre", "Professeur", "Administration"];
 const REFRESH_MS = 8000;
 
 export default function JourJPage() {

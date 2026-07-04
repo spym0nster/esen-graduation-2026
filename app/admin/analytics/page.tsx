@@ -15,7 +15,7 @@ interface Student {
 }
 interface Guest { id: string; parentId: string; scanned: boolean }
 
-const CORDER = ["L1", "L2", "L3", "M1", "M2"];
+const CORDER = ["L1", "L2", "L3", "M1", "M2", "Autre", "Professeur", "Administration"];
 const REFRESH_MS = 15000;
 
 export default function AnalyticsPage() {
