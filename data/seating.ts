@@ -16,7 +16,7 @@ export const zoneConfig: Record<ZoneKey, {
   ESEN:  { label:"ESEN General",                     labelFr:"ESEN Général",                     color:"rgba(46,85,184,0.65)",  border:"#2E55B8", glow:"rgba(46,85,184,0.35)",  text:"#FFFFFF" },
   Laur:  { label:"Laureates",                        labelFr:"Lauréats",                         color:"rgba(200,160,20,0.60)", border:"#C9A014", glow:"rgba(200,160,20,0.35)", text:"#FFFFFF" },
   Admin: { label:"Faculty / Staff",                  labelFr:"Professeurs / Administration",      color:"rgba(155,111,191,0.38)", border:"#9B6FBF", glow:"rgba(155,111,191,0.45)", text:"#FFFFFF" },
-  Invite:{ label:"Guests",                           labelFr:"Invités",                           color:"rgba(255,255,255,0.04)", border:"rgba(255,255,255,0.10)", glow:"transparent", text:"#F5ECD7" },
+  Invite:{ label:"Guests",                           labelFr:"Invités",                           color:"rgba(255,255,255,0.10)", border:"rgba(255,255,255,0.22)", glow:"rgba(255,255,255,0.18)", text:"#F5ECD7" },
   EMPTY: { label:"",                                 labelFr:"",                                 color:"transparent",           border:"transparent",           glow:"transparent",           text:"transparent" },
 };
 

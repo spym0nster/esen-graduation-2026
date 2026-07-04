@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { seatingGrid, zoneConfig, ZoneKey, LEFT_COLS } from "@/data/seating";
 
-const FILTER_ZONES: ZoneKey[] = ["BIS", "BI", "EB", "M2", "MDS", "ESEN", "Laur", "Admin"];
+const FILTER_ZONES: ZoneKey[] = ["BIS", "BI", "EB", "M2", "MDS", "ESEN", "Laur", "Admin", "Invite"];
 
 const RIGHT_COLS = 16;
 
