@@ -6,7 +6,7 @@ import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { GoldButton } from "../ui/GoldButton";
 import { useTranslations } from "next-intl";
-import { validateRSVP, VALID_CLASSES, VALID_SPECIALTIES, RSVPEntry } from "@/lib/rsvp";
+import { validateRSVP, VALID_CLASSES, VALID_SPECIALTIES, NON_STUDENT_ROLES, RSVPEntry } from "@/lib/rsvp";
 
 function ErrorMsg({ msg }: { msg?: string }) {
   if (!msg) return null;
@@ -37,7 +37,12 @@ export function RSVPSection() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: name === "guestCount" ? Number(value) : value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: name === "guestCount" ? Number(value) : value };
+      // Professeur / Administration have no specialty → clear it.
+      if (name === "classe" && NON_STUDENT_ROLES.includes(value)) next.specialty = "";
+      return next;
+    });
     // Clear error for the field being typed in
     if (errors[name]) {
       setErrors((prev) => {
@@ -208,22 +213,24 @@ export function RSVPSection() {
                   </div>
 
                   {/* ROW 3 */}
-                  <div className={inputContainerClass}>
-                    <label className={labelClass}>{t("field.classe", { default: "Votre classe" })}{requiredAsterisk}</label>
+                  <div className={`${inputContainerClass}${NON_STUDENT_ROLES.includes(formData.classe || "") ? " sm:col-span-2" : ""}`}>
+                    <label className={labelClass}>{t("field.classe", { default: "Votre classe / statut" })}{requiredAsterisk}</label>
                     <select name="classe" value={formData.classe} onChange={handleChange} className={getFieldClass("classe")} style={selectArrowStyle}>
                       <option value="" disabled>{t("placeholder.classe", { default: "Sélectionner..." })}</option>
                       {VALID_CLASSES.map(c => <option key={c} value={c} className="bg-[#1A1410]">{c}</option>)}
                     </select>
                     <ErrorMsg msg={errors.classe} />
                   </div>
-                  <div className={inputContainerClass}>
-                    <label className={labelClass}>{t("field.specialty", { default: "Votre spécialité" })}{requiredAsterisk}</label>
-                    <select name="specialty" value={formData.specialty} onChange={handleChange} className={getFieldClass("specialty")} style={selectArrowStyle}>
-                      <option value="" disabled>{t("placeholder.specialty", { default: "Sélectionner..." })}</option>
-                      {VALID_SPECIALTIES.map(s => <option key={s} value={s} className="bg-[#1A1410]">{s}</option>)}
-                    </select>
-                    <ErrorMsg msg={errors.specialty} />
-                  </div>
+                  {!NON_STUDENT_ROLES.includes(formData.classe || "") && (
+                    <div className={inputContainerClass}>
+                      <label className={labelClass}>{t("field.specialty", { default: "Votre spécialité" })}{requiredAsterisk}</label>
+                      <select name="specialty" value={formData.specialty} onChange={handleChange} className={getFieldClass("specialty")} style={selectArrowStyle}>
+                        <option value="" disabled>{t("placeholder.specialty", { default: "Sélectionner..." })}</option>
+                        {VALID_SPECIALTIES.map(s => <option key={s} value={s} className="bg-[#1A1410]">{s}</option>)}
+                      </select>
+                      <ErrorMsg msg={errors.specialty} />
+                    </div>
+                  )}
 
                   {/* ROW 4 */}
                   <div className={`sm:col-span-2 ${inputContainerClass}`}>

@@ -24,7 +24,9 @@ export interface GuestRecord {
   scannedAt?: string | null;
 }
 
-export const VALID_CLASSES = ["L1", "L2", "L3", "M1", "M2", "Autre"];
+// Roles that are not students → no specialty required.
+export const NON_STUDENT_ROLES = ["Professeur", "Administration"];
+export const VALID_CLASSES = ["L1", "L2", "L3", "M1", "M2", "Autre", ...NON_STUDENT_ROLES];
 export const VALID_SPECIALTIES = ["BI", "BIS", "EBUS", "E-MDS", "DSSD", "WI", "EBUS (en ligne)", "VIC", "CGBI", "Autre"];
 
 export function validateRSVP(data: Partial<RSVPEntry>): { isValid: boolean; errors: Record<string, string> } {
@@ -62,7 +64,9 @@ export function validateRSVP(data: Partial<RSVPEntry>): { isValid: boolean; erro
     errors.classe = "Classe invalide";
   }
 
-  if (!data.specialty || !VALID_SPECIALTIES.includes(data.specialty)) {
+  // Specialty is required only for students, not for Professeur / Administration.
+  const isNonStudent = !!data.classe && NON_STUDENT_ROLES.includes(data.classe);
+  if (!isNonStudent && (!data.specialty || !VALID_SPECIALTIES.includes(data.specialty))) {
     errors.specialty = "Spécialité invalide";
   }
 
