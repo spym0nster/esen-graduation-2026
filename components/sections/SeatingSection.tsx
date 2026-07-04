@@ -115,7 +115,7 @@ export default function SeatingSection() {
           {/* Header row */}
           <div style={{ display: "flex", gap: sepPx, marginBottom: "8px", alignItems: "center" }}>
             <div style={{ width: leftWidth, textAlign: "center", color: "rgba(245,236,215,0.45)", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-              {locale === "fr" ? "VIP / INVITÉS" : "VIP / GUESTS"}
+              {locale === "fr" ? "PROFS · ADMIN / INVITÉS" : "FACULTY / GUESTS"}
             </div>
             <div style={{ width: sepPx, flexShrink: 0 }} />
             <div style={{ width: rightWidth, textAlign: "center", color: "#F0B429", fontFamily: "Inter, sans-serif", fontWeight: 500, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em" }}>
