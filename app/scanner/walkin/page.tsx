@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { VALID_CLASSES, VALID_SPECIALTIES } from "@/lib/rsvp";
 
 export default function WalkinPage() {
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/scanner/login", { cache: "no-store" });
+        const d = await r.json();
+        if (!d.authed) window.location.href = "/scanner"; else setAuthed(true);
+      } catch { window.location.href = "/scanner"; }
+    })();
+  }, []);
   const [f, setF] = useState({ firstName: "", lastName: "", email: "", phone: "", classe: "", specialty: "", guestCount: 0 });
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [err, setErr] = useState("");
@@ -35,6 +45,14 @@ export default function WalkinPage() {
 
   const label: React.CSSProperties = { fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "#F0B429", marginBottom: 6, display: "block" };
   const input: React.CSSProperties = { width: "100%", padding: "13px 14px", borderRadius: 10, boxSizing: "border-box", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(240,180,41,0.3)", color: "#F5ECD7", fontSize: 15, outline: "none" };
+
+  if (!authed) {
+    return (
+      <div style={{ minHeight: "100dvh", background: "linear-gradient(135deg,#0A1A4A,#0F2560,#1C0F06)", display: "flex", alignItems: "center", justifyContent: "center", color: "#F5ECD7", fontFamily: "Arial, Helvetica, sans-serif", opacity: 0.7 }}>
+        Vérification…
+      </div>
+    );
+  }
 
   return (
     <div style={{
