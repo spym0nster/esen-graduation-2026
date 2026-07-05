@@ -1,10 +1,20 @@
 export const runtime = 'nodejs';
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { getStudentByQrId, getGuestById, updateStudent, updateGuest, getVoidedQrIds } from '@/lib/rsvpService';
 import { isScannerAuthed } from '@/lib/scannerAuth';
+import { logHistory } from '@/lib/history';
+
+function clientIp(req: Request): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    req.headers.get('x-real-ip') ||
+    'inconnue'
+  );
+}
 
 export async function POST(req: Request) {
   if (!(await isScannerAuthed())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ip = clientIp(req);
   const body = await req.json();
   let { id } = body;
 
@@ -56,9 +66,12 @@ export async function POST(req: Request) {
     student.scannedAt = new Date().toISOString();
     await updateStudent(student);
 
+    const studentName = `${student.firstName} ${student.lastName}`.trim();
+    after(() => logHistory({ action: 'check-in', studentId: student.id, name: studentName, details: `entrée validée · IP ${ip}` }));
+
     return NextResponse.json({
       status: 'success',
-      name: `${student.firstName} ${student.lastName}`,
+      name: studentName,
       type: 'Diplômé(e)',
     });
   }
@@ -79,6 +92,9 @@ export async function POST(req: Request) {
     guest.scanned = true;
     guest.scannedAt = new Date().toISOString();
     await updateGuest(guest);
+
+    after(() => logHistory({ action: 'check-in', studentId: guest.parentId, name, details: `entrée validée · IP ${ip}` }));
+
     return NextResponse.json({ status: 'success', name, type: 'Invité(e)' });
   }
 

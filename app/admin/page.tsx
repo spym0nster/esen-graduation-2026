@@ -53,7 +53,7 @@ type Tab = "students" | "guests" | "history" | "gallery" | "wall";
 
 interface HistoryEntry {
   date: string;
-  action: "modification" | "annulation" | "suppression" | "renvoi" | "walk-in";
+  action: "modification" | "annulation" | "suppression" | "renvoi" | "walk-in" | "check-in";
   studentId: string;
   name: string;
   details: string;
@@ -820,6 +820,7 @@ function HistoryPanel({ entries, loading, onRefresh }: { entries: HistoryEntry[]
       suppression:  { bg: "#2d0a0a", fg: "#f87171", label: "Suppression" },
       renvoi:       { bg: "#1e2a00", fg: "#F0B429", label: "Renvoi" },
       "walk-in":    { bg: "#1e3a5f", fg: "#60a5fa", label: "Walk-in" },
+      "check-in":   { bg: "#052e16", fg: "#4ade80", label: "Check-in" },
     };
     const c = map[a];
     return <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 12, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{c.label}</span>;
@@ -835,6 +836,7 @@ function HistoryPanel({ entries, loading, onRefresh }: { entries: HistoryEntry[]
         />
         <select value={filter} onChange={(e) => setFilter(e.target.value as "" | HistoryEntry["action"])} style={{ padding: "10px 12px", borderRadius: 10, background: "#0a0f1e", border: "1px solid #1e3a5f", color: "#fff", fontSize: 13 }}>
           <option value="">Toutes les actions</option>
+          <option value="check-in">Check-ins</option>
           <option value="modification">Modifications</option>
           <option value="annulation">Annulations</option>
           <option value="suppression">Suppressions</option>
