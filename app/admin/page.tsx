@@ -431,12 +431,20 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {([
-            { key: "students" as Tab, label: `Étudiants (${students.length})` },
-            { key: "guests" as Tab, label: `Accompagnateurs (${guests.length})` },
-            { key: "gallery" as Tab, label: `Galerie (${mediaGallery.length})` },
-            { key: "wall" as Tab, label: `Mur (${mediaWall.length})` },
-          ]).map((t) => (
+          {(() => {
+            const activeStudents = students.filter((s) => !s.voided).length;
+            const voidedStudents = students.length - activeStudents;
+            const activeGuests = guests.filter((g) => !g.voided).length;
+            const voidedGuests = guests.length - activeGuests;
+            const label = (base: string, active: number, voided: number) =>
+              voided > 0 ? `${base} (${active}) · ${voided} annulé${voided === 1 ? "" : "s"}` : `${base} (${active})`;
+            return [
+              { key: "students" as Tab, label: label("Étudiants", activeStudents, voidedStudents) },
+              { key: "guests" as Tab, label: label("Accompagnateurs", activeGuests, voidedGuests) },
+              { key: "gallery" as Tab, label: `Galerie (${mediaGallery.length})` },
+              { key: "wall" as Tab, label: `Mur (${mediaWall.length})` },
+            ];
+          })().map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
