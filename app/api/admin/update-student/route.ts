@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/emailService";
 import { isAdmin } from "@/lib/adminAuth";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
 import { VALID_CLASSES, VALID_SPECIALTIES, NON_STUDENT_ROLES } from "@/lib/rsvp";
+import { logHistory, diffStudent } from "@/lib/history";
 
 export const runtime = "nodejs";
 
@@ -55,12 +56,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const before = {
+    firstName: student.firstName, lastName: student.lastName, email: student.email,
+    phone: student.phone, classe: student.classe, specialty: student.specialty,
+  };
+
   student.firstName = fn;
   student.lastName = ln;
   student.email = newEmail;
   student.phone = ph;
   student.classe = cl;
   student.specialty = isNonStudent ? "" : sp;
+
+  const after = {
+    firstName: fn, lastName: ln, email: newEmail,
+    phone: ph, classe: cl, specialty: student.specialty,
+  };
+  const diff = diffStudent(before, after, ["firstName", "lastName", "email", "phone", "classe", "specialty"]);
 
   if (resend) {
     try {
@@ -90,5 +102,18 @@ export async function POST(req: NextRequest) {
   }
 
   await updateStudent(student);
+
+  const parts: string[] = [];
+  if (diff) parts.push(diff);
+  if (resend) parts.push("ticket renvoyé");
+  if (parts.length > 0) {
+    await logHistory({
+      action: "modification",
+      studentId,
+      name: `${fn} ${ln}`.trim(),
+      details: parts.join(" · "),
+    });
+  }
+
   return NextResponse.json({ success: true, resent: !!resend });
 }

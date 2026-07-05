@@ -3,6 +3,7 @@ import { getStudentById, updateStudent } from "@/lib/rsvpService";
 import { sendEmail } from "@/lib/emailService";
 import { isAdmin } from "@/lib/adminAuth";
 import { buildRSVPEmail } from "@/lib/emailTemplate";
+import { logHistory } from "@/lib/history";
 
 export const runtime = 'nodejs';
 
@@ -32,6 +33,12 @@ export async function POST(req: NextRequest) {
     });
     student.emailStatus = "Sent";
     await updateStudent(student);
+    await logHistory({
+      action: "renvoi",
+      studentId,
+      name: `${student.firstName} ${student.lastName}`.trim(),
+      details: `ticket renvoyé à ${student.email}`,
+    });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Resend error:", err);

@@ -49,7 +49,15 @@ interface MediaItem {
 }
 
 type View = "login" | "dashboard";
-type Tab = "students" | "guests" | "gallery" | "wall";
+type Tab = "students" | "guests" | "history" | "gallery" | "wall";
+
+interface HistoryEntry {
+  date: string;
+  action: "modification" | "annulation" | "suppression" | "renvoi" | "walk-in";
+  studentId: string;
+  name: string;
+  details: string;
+}
 
 export default function AdminPage() {
   const [view, setView] = useState<View>("login");
@@ -61,6 +69,8 @@ export default function AdminPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [mediaWall, setMediaWall] = useState<MediaItem[]>([]);
   const [mediaGallery, setMediaGallery] = useState<MediaItem[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [tab, setTab] = useState<Tab>("students");
   const [stats, setStats] = useState<Stats | null>(null);
   const [search, setSearch] = useState("");
@@ -85,6 +95,21 @@ export default function AdminPage() {
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   useEffect(() => { setPage(1); }, [tab, search]);
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/admin/history", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.entries || []);
+      }
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { if (tab === "history") fetchHistory(); }, [tab, fetchHistory]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -441,6 +466,7 @@ export default function AdminPage() {
             return [
               { key: "students" as Tab, label: label("Étudiants", activeStudents, voidedStudents) },
               { key: "guests" as Tab, label: label("Accompagnateurs", activeGuests, voidedGuests) },
+              { key: "history" as Tab, label: "Historique" },
               { key: "gallery" as Tab, label: `Galerie (${mediaGallery.length})` },
               { key: "wall" as Tab, label: `Mur (${mediaWall.length})` },
             ];
@@ -489,6 +515,8 @@ export default function AdminPage() {
           <MediaPanel type="gallery" items={mediaGallery} onChange={fetchData} showToast={showToast} />
         ) : tab === "wall" ? (
           <MediaPanel type="wall" items={mediaWall} onChange={fetchData} showToast={showToast} />
+        ) : tab === "history" ? (
+          <HistoryPanel entries={history} loading={historyLoading} onRefresh={fetchHistory} />
         ) : tab === "guests" ? (
           <>
             <GuestTable
@@ -768,6 +796,83 @@ export default function AdminPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HistoryPanel({ entries, loading, onRefresh }: { entries: HistoryEntry[]; loading: boolean; onRefresh: () => void }) {
+  const [filter, setFilter] = useState<"" | HistoryEntry["action"]>("");
+  const [q, setQ] = useState("");
+  const shown = entries.filter((e) => {
+    if (filter && e.action !== filter) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      if (!(e.name.toLowerCase().includes(s) || e.details.toLowerCase().includes(s))) return false;
+    }
+    return true;
+  });
+  const badge = (a: HistoryEntry["action"]) => {
+    const map: Record<HistoryEntry["action"], { bg: string; fg: string; label: string }> = {
+      modification: { bg: "#0a2540", fg: "#38bdf8", label: "Modification" },
+      annulation:   { bg: "#2d1a05", fg: "#fb923c", label: "Annulation" },
+      suppression:  { bg: "#2d0a0a", fg: "#f87171", label: "Suppression" },
+      renvoi:       { bg: "#1e2a00", fg: "#F0B429", label: "Renvoi" },
+      "walk-in":    { bg: "#1e3a5f", fg: "#60a5fa", label: "Walk-in" },
+    };
+    const c = map[a];
+    return <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 12, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{c.label}</span>;
+  };
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Chercher par nom ou détail…"
+          style={{ flex: "1 1 240px", padding: "10px 14px", borderRadius: 10, background: "#0a0f1e", border: "1px solid #1e3a5f", color: "#fff", fontSize: 13, boxSizing: "border-box" }}
+        />
+        <select value={filter} onChange={(e) => setFilter(e.target.value as "" | HistoryEntry["action"])} style={{ padding: "10px 12px", borderRadius: 10, background: "#0a0f1e", border: "1px solid #1e3a5f", color: "#fff", fontSize: 13 }}>
+          <option value="">Toutes les actions</option>
+          <option value="modification">Modifications</option>
+          <option value="annulation">Annulations</option>
+          <option value="suppression">Suppressions</option>
+          <option value="renvoi">Renvois</option>
+        </select>
+        <button onClick={onRefresh} style={{ padding: "10px 16px", borderRadius: 10, background: "#1B3A8C", border: "1px solid #F0B429", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>↺ Actualiser</button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 60, color: "#6b7280" }}>Chargement…</div>
+      ) : shown.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 60, color: "#6b7280", background: "#111827", border: "1px solid #1e3a5f", borderRadius: 12 }}>
+          {entries.length === 0 ? "Aucune modification enregistrée pour le moment." : "Aucun résultat pour ces filtres."}
+        </div>
+      ) : (
+        <div style={{ background: "#111827", border: "1px solid #1e3a5f", borderRadius: 12, overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#0a1224", color: "#9ca3af", textAlign: "left", fontSize: 11, letterSpacing: 1 }}>
+                {["DATE", "ACTION", "NOM", "DÉTAILS"].map((h) => (
+                  <th key={h} style={{ padding: "12px 16px", borderBottom: "1px solid #1e2a3f", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((e, i) => (
+                <tr key={`${e.date}-${i}`} style={{ background: i % 2 === 0 ? "#0d1526" : "#0a0f1e", borderBottom: "1px solid #1e2a3f" }}>
+                  <td style={{ padding: "12px 16px", color: "#9ca3af", whiteSpace: "nowrap", fontSize: 12 }}>{new Date(e.date).toLocaleString("fr-TN")}</td>
+                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>{badge(e.action)}</td>
+                  <td style={{ padding: "12px 16px", color: "#f9fafb", fontWeight: 600, whiteSpace: "nowrap" }}>{e.name || "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#9ca3af" }}>{e.details}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ padding: "12px 16px", color: "#6b7280", fontSize: 12 }}>
+            {shown.length} entrée{shown.length === 1 ? "" : "s"}{shown.length !== entries.length ? ` (filtré de ${entries.length})` : ""}
+          </div>
         </div>
       )}
     </div>
