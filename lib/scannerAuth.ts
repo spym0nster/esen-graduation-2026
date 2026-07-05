@@ -1,16 +1,16 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { isAdmin } from "./adminAuth";
 
 export const SCANNER_COOKIE = "scanner_auth";
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours — one long shift
 
 function secret(): string {
+  // Signed with the scanner passcode itself: changing the passcode instantly
+  // invalidates every open scanner session.
   return (
     process.env.SCANNER_SESSION_SECRET ||
     process.env.SCANNER_PASSCODE ||
-    process.env.ADMIN_PASSCODE ||
-    "esen-fallback-secret"
+    "esen-scanner-fallback-secret"
   );
 }
 
@@ -25,15 +25,11 @@ function safeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(ab, bb);
 }
 
-/** Accepts the scanner passcode. If SCANNER_PASSCODE isn't set, falls back
- *  to ADMIN_PASSCODE so the scanner still works out-of-the-box for admins. */
+/** Accepts ONLY the dedicated scanner passcode (strict separation from admin). */
 export function verifyScannerPasscode(input: unknown): boolean {
   const scannerPass = process.env.SCANNER_PASSCODE || "";
-  const adminPass = process.env.ADMIN_PASSCODE || "";
-  if (typeof input !== "string" || !input) return false;
-  if (scannerPass && safeEqual(input, scannerPass)) return true;
-  if (adminPass && safeEqual(input, adminPass)) return true;
-  return false;
+  if (typeof input !== "string" || !input || !scannerPass) return false;
+  return safeEqual(input, scannerPass);
 }
 
 export function makeScannerToken(): string {
@@ -52,12 +48,11 @@ export function verifyScannerToken(token: string | undefined): boolean {
   return safeEqual(sig, hmac(exp));
 }
 
-/** True if the current request carries a valid scanner OR admin session cookie. */
+/** True only if the request carries a valid scanner session cookie.
+ *  Strict separation: an admin session does NOT grant scanner access. */
 export async function isScannerAuthed(): Promise<boolean> {
   const store = await cookies();
-  if (verifyScannerToken(store.get(SCANNER_COOKIE)?.value)) return true;
-  // Admins can scan without a separate login.
-  return await isAdmin();
+  return verifyScannerToken(store.get(SCANNER_COOKIE)?.value);
 }
 
 // Best-effort per-instance rate limit (mirror of adminAuth).
