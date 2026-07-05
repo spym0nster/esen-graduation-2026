@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
+import { VALID_CLASSES, VALID_SPECIALTIES, NON_STUDENT_ROLES } from "@/lib/rsvp";
 
 interface Student {
   id: string;
@@ -68,6 +69,15 @@ export default function AdminPage() {
   const [modalStudent, setModalStudent] = useState<Student | null>(null);
   const [modalQRs, setModalQRs] = useState<{ studentQR: string; guestQRs: string[] } | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+
+  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState({
+    firstName: "", lastName: "", email: "", phone: "", classe: "", specialty: "",
+  });
+  const [editResend, setEditResend] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -163,6 +173,48 @@ export default function AdminPage() {
       fetchData();
     } else {
       showToast("Failed to resend email.", false);
+    }
+  };
+
+  const openEdit = (student: Student) => {
+    setEditStudent(student);
+    setEditForm({
+      firstName: student.firstName,
+      lastName: student.lastName,
+      email: student.email,
+      phone: student.phone,
+      classe: student.classe,
+      specialty: student.specialty || "",
+    });
+    setEditResend(false);
+    setEditError("");
+    setEditFieldErrors({});
+  };
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editStudent) return;
+    setEditLoading(true);
+    setEditError("");
+    setEditFieldErrors({});
+    const res = await fetch("/api/admin/update-student", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId: editStudent.id,
+        ...editForm,
+        resend: editResend,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setEditLoading(false);
+    if (res.ok) {
+      setEditStudent(null);
+      showToast(editResend ? "Mise à jour enregistrée et ticket renvoyé." : "Mise à jour enregistrée.", true);
+      fetchData();
+    } else {
+      setEditError(data.error || "Échec de la mise à jour.");
+      if (data.fields) setEditFieldErrors(data.fields);
     }
   };
 
@@ -423,7 +475,7 @@ export default function AdminPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: "#111827", borderBottom: "2px solid #1e3a5f" }}>
-                  {["Name", "Email", "Phone", "Class", "Major", "Guests", "Registered", "Check-in", "Email", "Actions"].map((h) => (
+                  {["Name", "Email", "Phone", "Class", "Major", "Guests", "Registered", "Check-in", "Email Statut", "Actions"].map((h) => (
                     <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: "#9ca3af", fontWeight: 600, fontSize: 11, letterSpacing: 1, whiteSpace: "nowrap" }}>
                       {h.toUpperCase()}
                     </th>
@@ -468,6 +520,11 @@ export default function AdminPage() {
                           style={actionBtn("#1e2a00", "#F0B429")}
                           title="Resend Email"
                         >{actionLoading === s.id + "-resend" ? "…" : "✉"}</button>
+                        <button
+                          onClick={() => openEdit(s)}
+                          style={actionBtn("#0a2540", "#38bdf8")}
+                          title="Modifier"
+                        >✎</button>
                         <button
                           onClick={() => handleDelete(s)}
                           disabled={actionLoading === s.id + "-delete"}
@@ -542,6 +599,133 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editStudent && (
+        <div
+          onClick={() => !editLoading && setEditStudent(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+            zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 24, overflowY: "auto",
+          }}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={submitEdit}
+            style={{
+              background: "#111827", border: "1px solid #1e3a5f", borderRadius: 16,
+              padding: 28, width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto",
+              fontFamily: "'Inter','Segoe UI',sans-serif", color: "#fff",
+            }}
+          >
+            <div style={{ fontSize: 11, letterSpacing: 4, color: "#F0B429", fontWeight: 700, marginBottom: 6 }}>
+              MODIFIER L&apos;INSCRIPTION
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+              {editStudent.firstName} {editStudent.lastName}
+            </div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 22 }}>
+              ID {editStudent.id.slice(0, 8)}… · {editStudent.guestCount} invité{editStudent.guestCount === 1 ? "" : "s"}
+            </div>
+
+            {(() => {
+              const isNonStudent = NON_STUDENT_ROLES.includes(editForm.classe);
+              const F = editForm; const FE = editFieldErrors;
+              const set = (k: keyof typeof editForm, v: string) => setEditForm({ ...F, [k]: v });
+              const label = { display: "block", fontSize: 11, color: "#9ca3af", marginBottom: 4, letterSpacing: 0.5 } as const;
+              const input = (err?: string) => ({
+                width: "100%", padding: "9px 12px", borderRadius: 8,
+                background: "#0a0f1e", border: `1px solid ${err ? "#7f1d1d" : "#1e3a5f"}`,
+                color: "#fff", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" as const,
+              });
+              const errText = (err?: string) => err ? <div style={{ fontSize: 11, color: "#fca5a5", marginTop: 3 }}>{err}</div> : null;
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={label}>Prénom</label>
+                    <input value={F.firstName} onChange={(e) => set("firstName", e.target.value)} style={input(FE.firstName)} />
+                    {errText(FE.firstName)}
+                  </div>
+                  <div>
+                    <label style={label}>Nom</label>
+                    <input value={F.lastName} onChange={(e) => set("lastName", e.target.value)} style={input(FE.lastName)} />
+                    {errText(FE.lastName)}
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={label}>Email</label>
+                    <input type="email" value={F.email} onChange={(e) => set("email", e.target.value)} style={input(FE.email)} />
+                    {errText(FE.email)}
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={label}>Téléphone</label>
+                    <input value={F.phone} onChange={(e) => set("phone", e.target.value)} style={input(FE.phone)} />
+                    {errText(FE.phone)}
+                  </div>
+                  <div>
+                    <label style={label}>Classe</label>
+                    <select value={F.classe} onChange={(e) => set("classe", e.target.value)} style={input(FE.classe)}>
+                      {VALID_CLASSES.map((c) => <option key={c} value={c} style={{ background: "#0a0f1e" }}>{c}</option>)}
+                    </select>
+                    {errText(FE.classe)}
+                  </div>
+                  <div>
+                    <label style={label}>Spécialité {isNonStudent && <span style={{ color: "#6b7280" }}>(non requise)</span>}</label>
+                    <select value={F.specialty} onChange={(e) => set("specialty", e.target.value)} disabled={isNonStudent} style={{ ...input(FE.specialty), opacity: isNonStudent ? 0.4 : 1 }}>
+                      <option value="" style={{ background: "#0a0f1e" }}>—</option>
+                      {VALID_SPECIALTIES.map((s) => <option key={s} value={s} style={{ background: "#0a0f1e" }}>{s}</option>)}
+                    </select>
+                    {errText(FE.specialty)}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 18, fontSize: 13, color: "#9ca3af", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={editResend}
+                onChange={(e) => setEditResend(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: "#F0B429" }}
+              />
+              Renvoyer le ticket par email après enregistrement
+            </label>
+
+            {editError && (
+              <div style={{ marginTop: 14, padding: "10px 12px", background: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8, color: "#fca5a5", fontSize: 13 }}>
+                {editError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10, marginTop: 22, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setEditStudent(null)}
+                disabled={editLoading}
+                style={{
+                  padding: "10px 18px", borderRadius: 8, background: "#1f2937",
+                  border: "1px solid #374151", color: "#9ca3af",
+                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={editLoading}
+                style={{
+                  padding: "10px 20px", borderRadius: 8, background: "#1B3A8C",
+                  border: "1px solid #F0B429", color: "#fff",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  opacity: editLoading ? 0.6 : 1,
+                }}
+              >
+                {editLoading ? "…" : editResend ? "Enregistrer & renvoyer" : "Enregistrer"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
