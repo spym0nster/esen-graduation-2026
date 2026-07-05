@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStudentByQrId, getGuestByQrId, updateStudent, updateGuest } from "@/lib/rsvpService";
+import { isScannerAuthed } from "@/lib/scannerAuth";
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  // Marking someone entered requires a valid scanner session — same gate as
+  // /api/scanner/verify. Prevents unauthenticated check-ins.
+  if (!(await isScannerAuthed())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { token } = await req.json();
     if (!token) return NextResponse.json({ status: "invalid" }, { status: 400 });
