@@ -12,8 +12,9 @@ interface Student {
   guestCount: number;
   scanned: boolean;
   registeredAt: string;
+  voided?: boolean;
 }
-interface Guest { id: string; parentId: string; scanned: boolean }
+interface Guest { id: string; parentId: string; scanned: boolean; voided?: boolean }
 
 const CORDER = ["L1", "L2", "L3", "M1", "M2", "Autre", "Professeur", "Administration"];
 const REFRESH_MS = 15000;
@@ -35,8 +36,8 @@ export default function AnalyticsPage() {
       if (res.status === 401) { setAuthed(false); return; }
       const data = await res.json();
       setAuthed(true);
-      setStudents(data.students || []);
-      setGuests(data.guests || []);
+      setStudents((data.students || []).filter((s: Student) => !s.voided));
+      setGuests((data.guests || []).filter((g: Guest) => !g.voided));
       setUpdatedAt(new Date().toLocaleTimeString("fr-TN"));
     } catch {}
   }, []);

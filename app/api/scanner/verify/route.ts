@@ -1,6 +1,6 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
-import { getStudentByQrId, getGuestById, updateStudent, updateGuest } from '@/lib/rsvpService';
+import { getStudentByQrId, getGuestById, updateStudent, updateGuest, getVoidedQrIds } from '@/lib/rsvpService';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -14,12 +14,31 @@ export async function POST(req: Request) {
 
   if (!id) return NextResponse.json({ status: 'invalid' });
 
-  // Look up student and guest in parallel (they read different tabs) so a guest
-  // scan is as fast as a student scan instead of paying two sequential reads.
-  const [student, guest] = await Promise.all([
+  // Look up student, guest, and voided-list in parallel so a guest scan is as fast
+  // as a student scan instead of paying sequential reads.
+  const [student, guest, voided] = await Promise.all([
     getStudentByQrId(id),
     getGuestById(id),
+    getVoidedQrIds(),
   ]);
+
+  if (voided.has(id)) {
+    if (student) {
+      return NextResponse.json({
+        status: 'voided',
+        name: `${student.firstName} ${student.lastName}`,
+        type: 'Diplômé(e)',
+      });
+    }
+    if (guest) {
+      return NextResponse.json({
+        status: 'voided',
+        name: `Accompagnateur ${guest.guestIndex} de ${guest.parentName}`,
+        type: 'Invité(e)',
+      });
+    }
+    return NextResponse.json({ status: 'voided' });
+  }
 
   if (student) {
     if (student.scanned) {

@@ -18,6 +18,7 @@ interface Student {
   scannedAt?: string | null;
   emailStatus: string;
   registeredAt: string;
+  voided?: boolean;
 }
 
 interface Guest {
@@ -27,6 +28,7 @@ interface Guest {
   parentName: string;
   scanned: boolean;
   scannedAt?: string | null;
+  voided?: boolean;
 }
 
 interface Stats {
@@ -157,6 +159,29 @@ export default function AdminPage() {
       fetchData();
     } else {
       showToast("Failed to delete.", false);
+    }
+  };
+
+  const handleVoid = async (student: Student) => {
+    if (student.voided) { showToast("Déjà annulé.", true); return; }
+    const reason = prompt(
+      `Annuler les tickets de ${student.firstName} ${student.lastName} ?\n\nLes QR codes (étudiant + ${student.guestCount} invité${student.guestCount === 1 ? "" : "s"}) seront refusés au portail.\n\nMotif (optionnel) :`,
+      "Doublon"
+    );
+    if (reason === null) return;
+    setActionLoading(student.id + "-void");
+    const res = await fetch("/api/admin/void", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId: student.id, reason }),
+    });
+    setActionLoading(null);
+    if (res.ok) {
+      const data = await res.json();
+      showToast(`Annulé (${data.voided} ticket${data.voided === 1 ? "" : "s"}).`, true);
+      fetchData();
+    } else {
+      showToast("Échec de l'annulation.", false);
     }
   };
 
@@ -484,9 +509,12 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((s, i) => (
-                  <tr key={s.id} style={{ background: i % 2 === 0 ? "#0d1526" : "#0a0f1e", borderBottom: "1px solid #1e2a3f" }}>
+                  <tr key={s.id} style={{ background: i % 2 === 0 ? "#0d1526" : "#0a0f1e", borderBottom: "1px solid #1e2a3f", opacity: s.voided ? 0.55 : 1 }}>
                     <td style={{ padding: "12px 16px", fontWeight: 600, color: "#f9fafb", whiteSpace: "nowrap" }}>
                       {s.firstName} {s.lastName}
+                      {s.voided && (
+                        <span style={{ marginLeft: 8, fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "#5a1414", color: "#fca5a5", letterSpacing: 0.5, verticalAlign: "middle" }}>ANNULÉ</span>
+                      )}
                     </td>
                     <td style={{ padding: "12px 16px", color: "#9ca3af" }}>{s.email}</td>
                     <td style={{ padding: "12px 16px", color: "#9ca3af", whiteSpace: "nowrap" }}>{s.phone}</td>
@@ -525,6 +553,12 @@ export default function AdminPage() {
                           style={actionBtn("#0a2540", "#38bdf8")}
                           title="Modifier"
                         >✎</button>
+                        <button
+                          onClick={() => handleVoid(s)}
+                          disabled={actionLoading === s.id + "-void" || s.voided}
+                          style={actionBtn("#2d1a05", "#fb923c")}
+                          title={s.voided ? "Déjà annulé" : "Annuler les tickets"}
+                        >{actionLoading === s.id + "-void" ? "…" : "🚫"}</button>
                         <button
                           onClick={() => handleDelete(s)}
                           disabled={actionLoading === s.id + "-delete"}

@@ -132,12 +132,15 @@ export default function ScannerPage() {
 
   const ok = result?.status === "success";
   const already = result?.status === "already_scanned";
+  const voided = result?.status === "voided";
   const cameraError = result?.status === "camera_error";
 
   const state = ok
     ? { Icon: CheckCircle, color: "#34D399", label: "ENTRÉE AUTORISÉE", bg: "linear-gradient(135deg,#0c4a2b,#0a7a3c)", border: "rgba(52,211,153,0.6)" }
     : already
     ? { Icon: AlertTriangle, color: "#F0B429", label: "DÉJÀ SCANNÉ", bg: "linear-gradient(135deg,#5a4410,#7a5c0f)", border: "rgba(240,180,41,0.6)" }
+    : voided
+    ? { Icon: XCircle, color: "#F87171", label: "BILLET ANNULÉ", bg: "linear-gradient(135deg,#5a1414,#7a0f0f)", border: "rgba(248,113,113,0.6)" }
     : { Icon: XCircle, color: "#F87171", label: "CODE INVALIDE", bg: "linear-gradient(135deg,#5a1414,#7a0f0f)", border: "rgba(248,113,113,0.6)" };
 
   const corner = (v: "top" | "bottom", h: "left" | "right"): React.CSSProperties => {

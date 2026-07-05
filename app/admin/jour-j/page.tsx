@@ -8,8 +8,8 @@ import { fireConfetti } from "@/lib/celebrate";
 
 Chart.register(...registerables);
 
-interface Student { id: string; classe: string; specialty: string; guestCount: number; scanned: boolean; emailStatus: string }
-interface Guest { id: string; parentId: string; scanned: boolean }
+interface Student { id: string; classe: string; specialty: string; guestCount: number; scanned: boolean; emailStatus: string; voided?: boolean }
+interface Guest { id: string; parentId: string; scanned: boolean; voided?: boolean }
 
 const CORDER = ["L1", "L2", "L3", "M1", "M2", "Autre", "Professeur", "Administration"];
 const REFRESH_MS = 8000;
@@ -31,8 +31,8 @@ export default function JourJPage() {
       if (res.status === 401) { setAuthed(false); return; }
       const data = await res.json();
       setAuthed(true);
-      setStudents(data.students || []);
-      setGuests(data.guests || []);
+      setStudents((data.students || []).filter((s: Student) => !s.voided));
+      setGuests((data.guests || []).filter((g: Guest) => !g.voided));
       setUpdatedAt(new Date().toLocaleTimeString("fr-TN"));
       setPulse(true); setTimeout(() => setPulse(false), 400);
     } catch {}

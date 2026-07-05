@@ -48,6 +48,7 @@ export interface StoredStudent {
   scannedAt?: string | null;
   emailStatus: "Pending" | "Sent" | "Failed" | "Walk-in";
   qrId: string;
+  voided?: boolean;
   _rowIndex?: number; // internal — sheet row number (1-based)
 }
 
@@ -61,6 +62,7 @@ export interface StoredGuest {
   scanned: boolean;
   scannedAt?: string | null;
   qrId: string;
+  voided?: boolean;
   _rowIndex?: number; // internal — sheet row number (1-based)
 }
 
@@ -137,13 +139,17 @@ async function ensureGuestHeaders(rows: string[][]): Promise<void> {
 
 // ─── Student CRUD ──────────────────────────────────────────────────────────────
 export async function getAllStudents(): Promise<StoredStudent[]> {
-  const rows = await sheetGetRows("Students");
+  const [rows, voided] = await Promise.all([sheetGetRows("Students"), getVoidedQrIds()]);
   if (rows.length <= 1) return [];
   return rows
     .slice(1)
     .filter((row) => row[S.id])
     // row at array index i (0-based, after slice) → sheet row i + 2
-    .map((row, i) => rowToStudent(row, i + 2))
+    .map((row, i) => {
+      const s = rowToStudent(row, i + 2);
+      s.voided = voided.has(s.qrId);
+      return s;
+    })
     .sort((a, b) =>
       new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime()
     );
@@ -250,13 +256,17 @@ export async function updateGuest(guest: StoredGuest): Promise<void> {
 }
 
 export async function getAllGuests(): Promise<StoredGuest[]> {
-  const rows = await sheetGetRows("Guests");
+  const [rows, voided] = await Promise.all([sheetGetRows("Guests"), getVoidedQrIds()]);
   if (rows.length <= 1) return [];
   return rows
     .slice(1)
     .filter((row) => row[G.guestId])
     // row at array index i (0-based, after slice) → sheet row i + 2
-    .map((row, i) => rowToGuest(row, i + 2));
+    .map((row, i) => {
+      const g = rowToGuest(row, i + 2);
+      g.voided = voided.has(g.qrId);
+      return g;
+    });
 }
 
 export async function getGuestsForStudent(guestIds: string[]): Promise<StoredGuest[]> {
@@ -270,20 +280,74 @@ export async function getGuestsForStudent(guestIds: string[]): Promise<StoredGue
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 export async function getStats() {
-  const [students, guestRows] = await Promise.all([
-    getAllStudents(),
-    sheetGetRows("Guests"),
-  ]);
+  const [students, guests] = await Promise.all([getAllStudents(), getAllGuests()]);
 
-  const totalStudents = students.length;
-  const totalGuests = students.reduce((sum, s) => sum + (s.guestCount || 0), 0);
+  const liveStudents = students.filter((s) => !s.voided);
+  const liveGuests = guests.filter((g) => !g.voided);
+
+  const totalStudents = liveStudents.length;
+  const totalGuests = liveGuests.length;
   const totalExpected = totalStudents + totalGuests;
-  const studentsCheckedIn = students.filter((s) => s.scanned).length;
-  const guestsCheckedIn = guestRows.slice(1).filter(
-    (row) => row[G.scanned] === "TRUE"
-  ).length;
+  const studentsCheckedIn = liveStudents.filter((s) => s.scanned).length;
+  const guestsCheckedIn = liveGuests.filter((g) => g.scanned).length;
 
   return { totalStudents, totalGuests, totalExpected, studentsCheckedIn, guestsCheckedIn };
+}
+
+// ─── Voided tickets ────────────────────────────────────────────────────────────
+// Voided sheet columns: A=qrId, B=type, C=targetId, D=name, E=reason, F=voidedAt
+const V = { qrId: 0, type: 1, targetId: 2, name: 3, reason: 4, voidedAt: 5 } as const;
+
+let voidedCache: { at: number; ids: Set<string> } | null = null;
+const VOIDED_TTL_MS = 5000; // small cache to avoid re-reading per row
+
+export async function getVoidedQrIds(force = false): Promise<Set<string>> {
+  const now = Date.now();
+  if (!force && voidedCache && now - voidedCache.at < VOIDED_TTL_MS) return voidedCache.ids;
+  try {
+    const rows = await sheetGetRows("Voided");
+    const ids = new Set<string>(
+      rows.slice(1).map((r) => (r[V.qrId] || "").trim()).filter(Boolean)
+    );
+    voidedCache = { at: now, ids };
+    return ids;
+  } catch {
+    return new Set<string>();
+  }
+}
+
+export function invalidateVoidedCache(): void {
+  voidedCache = null;
+}
+
+/** Mark a student and all their guests as voided. Idempotent — no-op if already voided. */
+export async function voidStudent(studentId: string, reason: string): Promise<{ voided: number }> {
+  const student = await getStudentById(studentId);
+  if (!student) throw new Error("Student not found");
+  const guests = await getGuestsForStudent(student.guestIds || []);
+  const voided = await getVoidedQrIds(true);
+
+  const now = new Date().toISOString();
+  const newRows: string[][] = [];
+  if (!voided.has(student.qrId)) {
+    newRows.push([
+      student.qrId, "student", student.id,
+      `${student.firstName} ${student.lastName}`.trim(),
+      reason || "", now,
+    ]);
+  }
+  for (const g of guests) {
+    if (!voided.has(g.qrId)) {
+      newRows.push([
+        g.qrId, "guest", g.id,
+        `${g.parentName} — invité n°${g.guestIndex}`,
+        reason || "", now,
+      ]);
+    }
+  }
+  for (const r of newRows) await sheetAppendRow("Voided", r);
+  invalidateVoidedCache();
+  return { voided: newRows.length };
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
