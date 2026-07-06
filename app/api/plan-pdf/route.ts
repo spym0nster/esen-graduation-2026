@@ -11,13 +11,14 @@ const PRINT: Record<ZoneKey, { fill: string; text: string; label: string; where:
   M2:    { fill: "#0074B0", text: "#FFFFFF", label: "Master 2",                    where: "Diplomes - bloc 4" },
   MDS:   { fill: "#F0B429", text: "#3A2A00", label: "E-Marketing & Digital Strat.", where: "Diplomes - rangee 19" },
   ESEN:  { fill: "#3E67C0", text: "#FFFFFF", label: "ESEN General",                where: "Diplomes - fond de salle" },
-  Laur:  { fill: "#B8901A", text: "#FFFFFF", label: "Laureats",                    where: "Diplomes - rangees 17-18" },
+  Laur:  { fill: "#C79A16", text: "#3A2A00", label: "Laureats",                    where: "Diplomes - rangees 17-18" },
   Admin: { fill: "#9B6FBF", text: "#FFFFFF", label: "Professeurs / Administration", where: "Avant gauche (3 rangs)" },
-  Invite:{ fill: "#EBE7DA", text: "#5A5340", label: "Invites",                     where: "Cote gauche" },
+  Invite:{ fill: "#CFC7AD", text: "#4A4330", label: "Invites",                     where: "Cote gauche" },
   EMPTY: { fill: "#FFFFFF", text: "#FFFFFF", label: "", where: "" },
 };
 
 const LEGEND: ZoneKey[] = ["Admin", "Invite", "BIS", "BI", "EB", "M2", "Laur", "MDS", "ESEN"];
+const seatLabel = (z: ZoneKey) => (z !== "Admin" && z !== "Invite" && z !== "EMPTY" ? z : "");
 const rgb = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "");
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
@@ -76,35 +77,25 @@ export async function GET() {
   doc.line(STARTX + LEFTW + AISLE / 2, GRID_TOP, STARTX + LEFTW + AISLE / 2, GRID_TOP + GRID_H);
   doc.setLineDashPattern([], 0);
 
-  // Seats
+  // Seats — each seat carries its zone code, with a thin border so the
+  // grid stays crisp on paper (esp. the light "Invités" seats).
+  doc.setDrawColor(150, 150, 150);
+  doc.setLineWidth(0.1);
+  doc.setFont("helvetica", "bold");
   seatingGrid.forEach((row, r) => {
     row.forEach((z, c) => {
       const isLeft = c < LEFT_COLS;
       const x = isLeft ? STARTX + c * (SEAT + GX) : RIGHTX + (c - LEFT_COLS) * (SEAT + GX);
       const y = GRID_TOP + r * ROW_PITCH;
       doc.setFillColor(...rgb(PRINT[z].fill));
-      doc.roundedRect(x, y, SEAT, SEAT, 0.5, 0.5, "F");
+      doc.roundedRect(x, y, SEAT, SEAT, 0.5, 0.5, "FD");
+      const lbl = seatLabel(z);
+      if (lbl) {
+        doc.setTextColor(...rgb(PRINT[z].text));
+        doc.setFontSize(4.4);
+        doc.text(lbl, x + SEAT / 2, y + SEAT / 2, { align: "center", baseline: "middle" });
+      }
     });
-  });
-
-  // One big readable label centred on each zone block (right side)
-  const subX = (c: number) => RIGHTX + c * (SEAT + GX);
-  const zLabels: Array<{ z: ZoneKey; text: string; c0: number; c1: number; r0: number; r1: number; size: number }> = [
-    { z: "BIS", text: "BIS", c0: 0, c1: 3, r0: 0, r1: 15, size: 11 },
-    { z: "BI", text: "BI", c0: 4, c1: 7, r0: 0, r1: 15, size: 11 },
-    { z: "EB", text: "EB", c0: 8, c1: 11, r0: 0, r1: 15, size: 11 },
-    { z: "M2", text: "M2", c0: 12, c1: 15, r0: 0, r1: 15, size: 11 },
-    { z: "Laur", text: "LAUREATS", c0: 0, c1: 15, r0: 16, r1: 17, size: 9 },
-    { z: "MDS", text: "E-MARKETING & DIGITAL STRATEGIES", c0: 0, c1: 15, r0: 18, r1: 18, size: 6 },
-    { z: "ESEN", text: "ESEN GENERAL", c0: 0, c1: 15, r0: 19, r1: 26, size: 14 },
-  ];
-  doc.setFont("helvetica", "bold");
-  zLabels.forEach((L) => {
-    const cx = (subX(L.c0) + subX(L.c1) + SEAT) / 2;
-    const cy = (GRID_TOP + L.r0 * ROW_PITCH + GRID_TOP + L.r1 * ROW_PITCH + SEAT) / 2;
-    doc.setFontSize(L.size);
-    doc.setTextColor(...rgb(PRINT[L.z].text));
-    doc.text(L.text, cx, cy, { align: "center", baseline: "middle" });
   });
 
   // Legend
