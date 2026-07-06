@@ -16,7 +16,6 @@ const PRINT: Record<ZoneKey, { fill: string; text: string; label: string; where:
 };
 
 const LEGEND: ZoneKey[] = ["Admin", "Invite", "BIS", "BI", "EB", "M2", "Laur", "MDS", "ESEN"];
-const seatLabel = (z: ZoneKey) => (z !== "Admin" && z !== "Invite" && z !== "EMPTY" ? z : "");
 
 // ── SVG geometry (A4 portrait canvas: 794 × 1123 @ 96dpi) ──
 const W = 794, H = 1123;
@@ -36,13 +35,25 @@ export default function PlanPage() {
       const isLeft = c < LEFT_COLS;
       const x = isLeft ? STARTX + c * (SEAT + GX) : RIGHTX + (c - LEFT_COLS) * (SEAT + GX);
       const y = GRID_TOP + r * (SEAT + GY);
-      const p = PRINT[z];
-      seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={p.fill} />);
-      const lbl = seatLabel(z);
-      if (lbl) seats.push(
-        <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2 + 2} textAnchor="middle" fontSize={5.5} fontWeight={700} fill={p.text}>{lbl}</text>
-      );
+      seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={PRINT[z].fill} />);
     });
+  });
+
+  // One big readable label per zone block (right side)
+  const subX = (c: number) => RIGHTX + c * (SEAT + GX);
+  const zLabels: Array<{ z: ZoneKey; text: string; c0: number; c1: number; r0: number; r1: number; size: number }> = [
+    { z: "BIS", text: "BIS", c0: 0, c1: 3, r0: 0, r1: 15, size: 30 },
+    { z: "BI", text: "BI", c0: 4, c1: 7, r0: 0, r1: 15, size: 30 },
+    { z: "EB", text: "EB", c0: 8, c1: 11, r0: 0, r1: 15, size: 30 },
+    { z: "M2", text: "M2", c0: 12, c1: 15, r0: 0, r1: 15, size: 30 },
+    { z: "Laur", text: "LAURÉATS", c0: 0, c1: 15, r0: 16, r1: 17, size: 22 },
+    { z: "MDS", text: "E-MARKETING & DIGITAL STRATEGIES", c0: 0, c1: 15, r0: 18, r1: 18, size: 12 },
+    { z: "ESEN", text: "ESEN GÉNÉRAL", c0: 0, c1: 15, r0: 19, r1: 26, size: 34 },
+  ];
+  const zoneLabelEls = zLabels.map((L) => {
+    const cx = (subX(L.c0) + subX(L.c1) + SEAT) / 2;
+    const cy = (GRID_TOP + L.r0 * (SEAT + GY) + GRID_TOP + L.r1 * (SEAT + GY) + SEAT) / 2;
+    return <text key={L.z} x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize={L.size} fontWeight={800} fill={PRINT[L.z].text}>{L.text}</text>;
   });
 
   return (
@@ -94,6 +105,8 @@ export default function PlanPage() {
 
           {/* Seats */}
           {seats}
+          {/* Zone labels */}
+          {zoneLabelEls}
 
           {/* Legend */}
           {LEGEND.map((z, i) => {

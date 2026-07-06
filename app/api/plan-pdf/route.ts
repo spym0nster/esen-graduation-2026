@@ -18,7 +18,6 @@ const PRINT: Record<ZoneKey, { fill: string; text: string; label: string; where:
 };
 
 const LEGEND: ZoneKey[] = ["Admin", "Invite", "BIS", "BI", "EB", "M2", "Laur", "MDS", "ESEN"];
-const seatLabel = (z: ZoneKey) => (z !== "Admin" && z !== "Invite" && z !== "EMPTY" ? z : "");
 const rgb = (hex: string): [number, number, number] => {
   const h = hex.replace("#", "");
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
@@ -78,7 +77,6 @@ export async function GET() {
   doc.setLineDashPattern([], 0);
 
   // Seats
-  doc.setFont("helvetica", "bold");
   seatingGrid.forEach((row, r) => {
     row.forEach((z, c) => {
       const isLeft = c < LEFT_COLS;
@@ -86,13 +84,27 @@ export async function GET() {
       const y = GRID_TOP + r * ROW_PITCH;
       doc.setFillColor(...rgb(PRINT[z].fill));
       doc.roundedRect(x, y, SEAT, SEAT, 0.5, 0.5, "F");
-      const lbl = seatLabel(z);
-      if (lbl) {
-        doc.setTextColor(...rgb(PRINT[z].text));
-        doc.setFontSize(2.9);
-        doc.text(lbl, x + SEAT / 2, y + SEAT / 2 + 0.9, { align: "center" });
-      }
     });
+  });
+
+  // One big readable label centred on each zone block (right side)
+  const subX = (c: number) => RIGHTX + c * (SEAT + GX);
+  const zLabels: Array<{ z: ZoneKey; text: string; c0: number; c1: number; r0: number; r1: number; size: number }> = [
+    { z: "BIS", text: "BIS", c0: 0, c1: 3, r0: 0, r1: 15, size: 11 },
+    { z: "BI", text: "BI", c0: 4, c1: 7, r0: 0, r1: 15, size: 11 },
+    { z: "EB", text: "EB", c0: 8, c1: 11, r0: 0, r1: 15, size: 11 },
+    { z: "M2", text: "M2", c0: 12, c1: 15, r0: 0, r1: 15, size: 11 },
+    { z: "Laur", text: "LAUREATS", c0: 0, c1: 15, r0: 16, r1: 17, size: 9 },
+    { z: "MDS", text: "E-MARKETING & DIGITAL STRATEGIES", c0: 0, c1: 15, r0: 18, r1: 18, size: 6 },
+    { z: "ESEN", text: "ESEN GENERAL", c0: 0, c1: 15, r0: 19, r1: 26, size: 14 },
+  ];
+  doc.setFont("helvetica", "bold");
+  zLabels.forEach((L) => {
+    const cx = (subX(L.c0) + subX(L.c1) + SEAT) / 2;
+    const cy = (GRID_TOP + L.r0 * ROW_PITCH + GRID_TOP + L.r1 * ROW_PITCH + SEAT) / 2;
+    doc.setFontSize(L.size);
+    doc.setTextColor(...rgb(PRINT[L.z].text));
+    doc.text(L.text, cx, cy, { align: "center", baseline: "middle" });
   });
 
   // Legend
