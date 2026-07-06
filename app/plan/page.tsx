@@ -39,7 +39,7 @@ export default function PlanPage() {
       seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={PRINT[z].fill} stroke="#9a9a9a" strokeWidth={0.4} />);
       const lbl = seatLabel(z);
       if (lbl) seats.push(
-        <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2} textAnchor="middle" dominantBaseline="central" fontSize={7} fontWeight={700} fill={PRINT[z].text}>{lbl}</text>
+        <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2} textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={700} fill={PRINT[z].text}>{lbl}</text>
       );
     });
   });

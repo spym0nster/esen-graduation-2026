@@ -92,7 +92,7 @@ export async function GET() {
       const lbl = seatLabel(z);
       if (lbl) {
         doc.setTextColor(...rgb(PRINT[z].text));
-        doc.setFontSize(4.4);
+        doc.setFontSize(5);
         doc.text(lbl, x + SEAT / 2, y + SEAT / 2, { align: "center", baseline: "middle" });
       }
     });
