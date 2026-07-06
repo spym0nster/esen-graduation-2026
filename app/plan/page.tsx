@@ -67,7 +67,8 @@ export default function PlanPage() {
 
       <div className="toolbar">
         <button className="btn ghost" onClick={() => history.back()}>← Retour</button>
-        <button className="btn" onClick={() => window.print()}>🖨 Imprimer / PDF</button>
+        <button className="btn ghost" onClick={() => window.print()}>🖨 Imprimer</button>
+        <button className="btn" onClick={() => window.open("/api/plan-pdf", "_blank")}>⬇ Télécharger le PDF</button>
       </div>
 
       <div className="card">
