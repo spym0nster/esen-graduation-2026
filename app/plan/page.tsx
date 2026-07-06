@@ -28,6 +28,10 @@ export default function PlanPage() {
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: #f3f4f6; }
         .wrap { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; }
+        .wrap, .sheet, .seat, .stage span, .sw, .rule, .note, .colhdr div {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
         .sheet {
           width: 210mm; min-height: 297mm; margin: 12px auto; background: #fff;
           padding: 12mm 12mm 10mm; box-shadow: 0 4px 24px rgba(0,0,0,.15);
