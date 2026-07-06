@@ -2,68 +2,64 @@
 
 import { seatingGrid, LEFT_COLS, ZoneKey } from "@/data/seating";
 
-// Print-friendly SOLID colors (the site palette is semi-transparent on a dark
-// bg; here everything sits on white paper, so we use opaque fills).
 const PRINT: Record<ZoneKey, { fill: string; text: string; label: string; where: string }> = {
-  BIS:   { fill: "#1B3A8C", text: "#fff", label: "Business Information System", where: "Diplômés — bloc 1" },
-  BI:    { fill: "#0F2560", text: "#fff", label: "Business Intelligence",        where: "Diplômés — bloc 2" },
-  EB:    { fill: "#0091B5", text: "#fff", label: "E-Business",                   where: "Diplômés — bloc 3" },
-  M2:    { fill: "#0074B0", text: "#fff", label: "Master 2",                     where: "Diplômés — bloc 4" },
-  MDS:   { fill: "#F0B429", text: "#3a2a00", label: "E-Marketing & Digital Strategies", where: "Diplômés — rangée 19" },
-  ESEN:  { fill: "#3E67C0", text: "#fff", label: "ESEN Général",                 where: "Diplômés — fond de salle" },
-  Laur:  { fill: "#B8901A", text: "#fff", label: "Lauréats",                     where: "Diplômés — rangées 17-18" },
-  Admin: { fill: "#9B6FBF", text: "#fff", label: "Professeurs / Administration", where: "Avant, côté gauche (3 rangs)" },
-  Invite:{ fill: "#EBE7DA", text: "#5a5340", label: "Invités",                   where: "Côté gauche" },
+  BIS:   { fill: "#1B3A8C", text: "#fff",    label: "Business Information System", where: "Diplômés — bloc 1" },
+  BI:    { fill: "#0F2560", text: "#fff",    label: "Business Intelligence",       where: "Diplômés — bloc 2" },
+  EB:    { fill: "#0091B5", text: "#fff",    label: "E-Business",                  where: "Diplômés — bloc 3" },
+  M2:    { fill: "#0074B0", text: "#fff",    label: "Master 2",                    where: "Diplômés — bloc 4" },
+  MDS:   { fill: "#F0B429", text: "#3a2a00", label: "E-Marketing & Digital Strat.", where: "Diplômés — rangée 19" },
+  ESEN:  { fill: "#3E67C0", text: "#fff",    label: "ESEN Général",                where: "Diplômés — fond de salle" },
+  Laur:  { fill: "#B8901A", text: "#fff",    label: "Lauréats",                    where: "Diplômés — rangées 17-18" },
+  Admin: { fill: "#9B6FBF", text: "#fff",    label: "Professeurs / Administration", where: "Avant gauche (3 rangs)" },
+  Invite:{ fill: "#EBE7DA", text: "#5a5340", label: "Invités",                     where: "Côté gauche" },
   EMPTY: { fill: "transparent", text: "transparent", label: "", where: "" },
 };
 
 const LEGEND: ZoneKey[] = ["Admin", "Invite", "BIS", "BI", "EB", "M2", "Laur", "MDS", "ESEN"];
 const seatLabel = (z: ZoneKey) => (z !== "Admin" && z !== "Invite" && z !== "EMPTY" ? z : "");
 
+// ── SVG geometry (A4 portrait canvas: 794 × 1123 @ 96dpi) ──
+const W = 794, H = 1123;
+const SEAT = 18, GX = 2, GY = 2, AISLE = 24;
+const LEFTW = LEFT_COLS * SEAT + (LEFT_COLS - 1) * GX;      // 278
+const RIGHTW = 16 * SEAT + 15 * GX;                          // 318
+const GRIDW = LEFTW + AISLE + RIGHTW;                        // 620
+const STARTX = Math.round((W - GRIDW) / 2);                  // ~87
+const RIGHTX = STARTX + LEFTW + AISLE;
+const GRID_TOP = 250;
+const GRID_H = seatingGrid.length * SEAT + (seatingGrid.length - 1) * GY;
+
 export default function PlanPage() {
+  const seats: React.ReactNode[] = [];
+  seatingGrid.forEach((row, r) => {
+    row.forEach((z, c) => {
+      const isLeft = c < LEFT_COLS;
+      const x = isLeft ? STARTX + c * (SEAT + GX) : RIGHTX + (c - LEFT_COLS) * (SEAT + GX);
+      const y = GRID_TOP + r * (SEAT + GY);
+      const p = PRINT[z];
+      seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={p.fill} />);
+      const lbl = seatLabel(z);
+      if (lbl) seats.push(
+        <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2 + 2} textAnchor="middle" fontSize={5.5} fontWeight={700} fill={p.text}>{lbl}</text>
+      );
+    });
+  });
+
   return (
     <div className="wrap">
       <style>{`
         @page { size: A4 portrait; margin: 8mm; }
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; background: #f3f4f6; }
-        .wrap { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; }
-        .wrap, .sheet, .seat, .stage span, .sw, .rule, .note, .colhdr div {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        .sheet {
-          width: 210mm; min-height: 297mm; margin: 12px auto; background: #fff;
-          padding: 12mm 12mm 10mm; box-shadow: 0 4px 24px rgba(0,0,0,.15);
-        }
-        .toolbar { max-width: 210mm; margin: 12px auto 0; display: flex; gap: 10px; justify-content: flex-end; }
+        html, body { margin: 0; padding: 0; background: #eceff3; }
+        .wrap { font-family: Arial, Helvetica, sans-serif; }
+        .toolbar { max-width: 794px; margin: 14px auto 0; display: flex; gap: 10px; justify-content: flex-end; }
         .btn { padding: 9px 18px; border-radius: 8px; border: 1px solid #1B3A8C; background: #1B3A8C; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
         .btn.ghost { background: #fff; color: #1B3A8C; }
-        .eyebrow { font-size: 10px; letter-spacing: 4px; color: #B8901A; font-weight: 700; text-align: center; }
-        .title { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 800; color: #0F2560; text-align: center; margin: 4px 0 2px; }
-        .sub { text-align: center; font-size: 12px; color: #555; margin-bottom: 10px; }
-        .rule { height: 2px; background: linear-gradient(90deg,#1B3A8C,#F0B429,#1B3A8C); margin: 0 auto 14px; width: 180px; }
-        .stage { text-align: center; margin: 0 auto 12px; }
-        .stage span { display: inline-block; background: #0F2560; color: #fff; padding: 7px 46px; border-radius: 20px; font-size: 13px; font-weight: 700; letter-spacing: 5px; }
-        .colhdr { display: flex; gap: 8mm; margin-bottom: 5px; }
-        .colhdr div { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #333; text-transform: uppercase; }
-        .grid { display: flex; flex-direction: column; gap: 2px; align-items: center; }
-        .row { display: flex; gap: 8mm; align-items: center; }
-        .block { display: flex; gap: 2px; }
-        .seat { width: 5mm; height: 5mm; border-radius: 1px; display: flex; align-items: center; justify-content: center; font-size: 4.5px; font-weight: 700; }
-        .aisle { width: 8mm; align-self: stretch; position: relative; }
-        .aisle::before { content: ""; position: absolute; left: 50%; top: 6%; bottom: 6%; width: 1px; background: repeating-linear-gradient(180deg,#bbb 0 3px,transparent 3px 6px); }
-        .legend { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; }
-        .li { display: flex; align-items: center; gap: 8px; font-size: 11px; }
-        .sw { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.15); }
-        .li b { color: #0F2560; font-weight: 700; }
-        .li .where { color: #777; }
-        .note { margin-top: 14px; padding: 8px 12px; background: #f5f2e8; border-left: 3px solid #F0B429; font-size: 11px; color: #444; line-height: 1.5; }
-        .foot { margin-top: 12px; text-align: center; font-size: 9px; color: #999; letter-spacing: 1px; }
+        .card { max-width: 794px; margin: 14px auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.15); }
+        .card svg { display: block; width: 100%; height: auto; }
         @media print {
           html, body { background: #fff; }
           .toolbar { display: none !important; }
-          .sheet { box-shadow: none; margin: 0; width: auto; min-height: auto; padding: 0; }
+          .card { max-width: none; margin: 0; box-shadow: none; }
         }
       `}</style>
 
@@ -72,57 +68,56 @@ export default function PlanPage() {
         <button className="btn" onClick={() => window.print()}>🖨 Imprimer / PDF</button>
       </div>
 
-      <div className="sheet">
-        <div className="eyebrow">ESEN · GRADUATION 2026</div>
-        <div className="title">Plan de la salle</div>
-        <div className="sub">Cérémonie de remise des diplômes · 9 juillet 2026 · UTICA</div>
-        <div className="rule" />
+      <div className="card">
+        <svg viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Plan de la salle de la cérémonie">
+          <rect x={0} y={0} width={W} height={H} fill="#ffffff" />
 
-        <div className="stage"><span>SCÈNE</span></div>
+          {/* Header */}
+          <text x={W / 2} y={54} textAnchor="middle" fontSize={11} letterSpacing={4} fontWeight={700} fill="#B8901A">ESEN · GRADUATION 2026</text>
+          <text x={W / 2} y={92} textAnchor="middle" fontSize={30} fontWeight={800} fontFamily="Georgia, serif" fill="#0F2560">Plan de la salle</text>
+          <text x={W / 2} y={116} textAnchor="middle" fontSize={13} fill="#555">Cérémonie de remise des diplômes · 9 juillet 2026 · UTICA</text>
+          <rect x={W / 2 - 90} y={130} width={180} height={2.5} fill="#F0B429" />
 
-        <div className="colhdr">
-          <div style={{ width: `calc(${LEFT_COLS} * 5mm + ${LEFT_COLS - 1} * 2px)` }}>Profs · Admin / Invités</div>
-          <div style={{ width: "8mm" }} />
-          <div style={{ width: `calc(16 * 5mm + 15 * 2px)`, color: "#B8901A" }}>Diplômés</div>
-        </div>
+          {/* Stage */}
+          <rect x={W / 2 - 95} y={158} width={190} height={34} rx={17} fill="#0F2560" />
+          <text x={W / 2} y={180} textAnchor="middle" fontSize={14} fontWeight={700} letterSpacing={6} fill="#fff">SCÈNE</text>
 
-        <div className="grid">
-          {seatingGrid.map((row, i) => {
-            const left = row.slice(0, LEFT_COLS);
-            const right = row.slice(LEFT_COLS);
+          {/* Column headers */}
+          <text x={STARTX + LEFTW / 2} y={236} textAnchor="middle" fontSize={11} fontWeight={700} letterSpacing={1.5} fill="#333">PROFS · ADMIN / INVITÉS</text>
+          <text x={RIGHTX + RIGHTW / 2} y={236} textAnchor="middle" fontSize={11} fontWeight={700} letterSpacing={1.5} fill="#B8901A">DIPLÔMÉS</text>
+
+          {/* Aisle dashed line */}
+          <line x1={STARTX + LEFTW + AISLE / 2} y1={GRID_TOP} x2={STARTX + LEFTW + AISLE / 2} y2={GRID_TOP + GRID_H} stroke="#c4c4c4" strokeWidth={1} strokeDasharray="3 3" />
+
+          {/* Seats */}
+          {seats}
+
+          {/* Legend */}
+          {LEGEND.map((z, i) => {
+            const col = i < 5 ? 0 : 1;
+            const rowI = i % 5;
+            const lx = col === 0 ? STARTX : W / 2 + 10;
+            const ly = GRID_TOP + GRID_H + 40 + rowI * 26;
+            const p = PRINT[z];
             return (
-              <div className="row" key={i}>
-                <div className="block">
-                  {left.map((z, c) => (
-                    <div key={c} className="seat" style={{ background: PRINT[z].fill, color: PRINT[z].text }}>{seatLabel(z)}</div>
-                  ))}
-                </div>
-                <div className="aisle" />
-                <div className="block">
-                  {right.map((z, c) => (
-                    <div key={c} className="seat" style={{ background: PRINT[z].fill, color: PRINT[z].text }}>{seatLabel(z)}</div>
-                  ))}
-                </div>
-              </div>
+              <g key={z}>
+                <rect x={lx} y={ly - 11} width={14} height={14} rx={2} fill={p.fill} stroke="rgba(0,0,0,0.15)" strokeWidth={0.5} />
+                <text x={lx + 22} y={ly} fontSize={11.5} fill="#0F2560" fontWeight={700}>{p.label}</text>
+                <text x={lx + 22} y={ly + 13} fontSize={10} fill="#888">{p.where}</text>
+              </g>
             );
           })}
-        </div>
 
-        <div className="legend">
-          {LEGEND.map((z) => (
-            <div className="li" key={z}>
-              <div className="sw" style={{ background: PRINT[z].fill }} />
-              <span><b>{PRINT[z].label}</b> — <span className="where">{PRINT[z].where}</span></span>
-            </div>
-          ))}
-        </div>
+          {/* Note */}
+          <rect x={STARTX} y={GRID_TOP + GRID_H + 190} width={GRIDW} height={54} fill="#f5f2e8" />
+          <rect x={STARTX} y={GRID_TOP + GRID_H + 190} width={3} height={54} fill="#F0B429" />
+          <text x={STARTX + 14} y={GRID_TOP + GRID_H + 210} fontSize={11} fill="#444"><tspan fontWeight={700}>Comment trouver votre place : </tspan>repérez votre catégorie dans la légende,</text>
+          <text x={STARTX + 14} y={GRID_TOP + GRID_H + 226} fontSize={11} fill="#444">puis rejoignez la zone correspondante. Diplômés à droite (par spécialité),</text>
+          <text x={STARTX + 14} y={GRID_TOP + GRID_H + 242} fontSize={11} fill="#444">invités à gauche, professeurs / administration aux 3 premiers rangs avant.</text>
 
-        <div className="note">
-          <b>Comment trouver votre place :</b> repérez votre catégorie dans la légende, puis rejoignez la zone correspondante.
-          Les <b>diplômés</b> sont à droite (par spécialité), les <b>invités</b> à gauche, et les <b>professeurs / administration</b> aux 3 premiers rangs avant, côté gauche.
-        </div>
-
-        <div className="foot">ESEN AMBASSADORS · PLAN INDICATIF</div>
+          {/* Footer */}
+          <text x={W / 2} y={H - 20} textAnchor="middle" fontSize={9} letterSpacing={1} fill="#aaa">ESEN AMBASSADORS · PLAN INDICATIF</text>
+        </svg>
       </div>
     </div>
   );
