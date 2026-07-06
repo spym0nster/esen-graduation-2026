@@ -48,7 +48,7 @@ export default function PlanPage() {
   return (
     <div className="wrap">
       <style>{`
-        @page { size: A4 portrait; margin: 8mm; }
+        @page { size: A4 portrait; margin: 0; }
         html, body { margin: 0; padding: 0; background: #eceff3; }
         .wrap { font-family: Arial, Helvetica, sans-serif; }
         .toolbar { max-width: 794px; margin: 14px auto 0; display: flex; gap: 10px; justify-content: flex-end; }
@@ -57,9 +57,11 @@ export default function PlanPage() {
         .card { max-width: 794px; margin: 14px auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.15); }
         .card svg { display: block; width: 100%; height: auto; }
         @media print {
-          html, body { background: #fff; }
+          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width: 210mm; }
+          .wrap { margin: 0 !important; padding: 0 !important; }
           .toolbar { display: none !important; }
-          .card { max-width: none; margin: 0; box-shadow: none; }
+          .card { max-width: none !important; width: 210mm !important; height: 297mm !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; }
+          .card svg { width: 210mm !important; height: 297mm !important; display: block !important; }
         }
       `}</style>
 
