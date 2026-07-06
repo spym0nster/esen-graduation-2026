@@ -13,7 +13,7 @@ const PRINT: Record<ZoneKey, { fill: string; text: string; label: string; where:
   ESEN:  { fill: "#3E67C0", text: "#FFFFFF", label: "ESEN General",                where: "Diplomes - fond de salle" },
   Laur:  { fill: "#C79A16", text: "#3A2A00", label: "Laureats",                    where: "Diplomes - rangees 17-18" },
   Admin: { fill: "#9B6FBF", text: "#FFFFFF", label: "Professeurs / Administration", where: "Avant gauche (3 rangs)" },
-  Invite:{ fill: "#CFC7AD", text: "#4A4330", label: "Invites",                     where: "Cote gauche" },
+  Invite:{ fill: "#BDB086", text: "#33301F", label: "Invites",                     where: "Cote gauche" },
   EMPTY: { fill: "#FFFFFF", text: "#FFFFFF", label: "", where: "" },
 };
 
@@ -79,8 +79,8 @@ export async function GET() {
 
   // Seats — each seat carries its zone code, with a thin border so the
   // grid stays crisp on paper (esp. the light "Invités" seats).
-  doc.setDrawColor(150, 150, 150);
-  doc.setLineWidth(0.1);
+  doc.setDrawColor(90, 90, 90);
+  doc.setLineWidth(0.15);
   doc.setFont("helvetica", "bold");
   seatingGrid.forEach((row, r) => {
     row.forEach((z, c) => {

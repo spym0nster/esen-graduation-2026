@@ -11,7 +11,7 @@ const PRINT: Record<ZoneKey, { fill: string; text: string; label: string; where:
   ESEN:  { fill: "#3E67C0", text: "#fff",    label: "ESEN Général",                where: "Diplômés — fond de salle" },
   Laur:  { fill: "#C79A16", text: "#3a2a00", label: "Lauréats",                    where: "Diplômés — rangées 17-18" },
   Admin: { fill: "#9B6FBF", text: "#fff",    label: "Professeurs / Administration", where: "Avant gauche (3 rangs)" },
-  Invite:{ fill: "#CFC7AD", text: "#4a4330", label: "Invités",                     where: "Côté gauche" },
+  Invite:{ fill: "#BDB086", text: "#33301f", label: "Invités",                     where: "Côté gauche" },
   EMPTY: { fill: "transparent", text: "transparent", label: "", where: "" },
 };
 
@@ -36,7 +36,7 @@ export default function PlanPage() {
       const isLeft = c < LEFT_COLS;
       const x = isLeft ? STARTX + c * (SEAT + GX) : RIGHTX + (c - LEFT_COLS) * (SEAT + GX);
       const y = GRID_TOP + r * (SEAT + GY);
-      seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={PRINT[z].fill} stroke="#9a9a9a" strokeWidth={0.4} />);
+      seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={PRINT[z].fill} stroke="#5a5a5a" strokeWidth={0.6} />);
       const lbl = seatLabel(z);
       if (lbl) seats.push(
         <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2} textAnchor="middle" dominantBaseline="central" fontSize={9} fontWeight={700} fill={PRINT[z].text}>{lbl}</text>
