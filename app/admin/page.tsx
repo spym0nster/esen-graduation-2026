@@ -187,6 +187,32 @@ export default function AdminPage() {
     }
   };
 
+  const handleAddGuest = async (student: Student) => {
+    if (student.guestCount >= 3) { showToast("Maximum 3 accompagnateurs déjà atteint.", false); return; }
+    if (!confirm(
+      `Ajouter un ${student.guestCount + 1}e accompagnateur pour ${student.firstName} ${student.lastName} ?\n\nUn nouveau billet QR sera créé et l'email de tickets sera renvoyé.`
+    )) return;
+    setActionLoading(student.id + "-addguest");
+    const res = await fetch("/api/admin/add-guest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId: student.id, resend: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setActionLoading(null);
+    if (res.ok) {
+      showToast(
+        data.resent
+          ? `Accompagnateur ajouté (${data.guestCount}/3) — tickets renvoyés.`
+          : `Accompagnateur ajouté (${data.guestCount}/3) — mais l'email a échoué, utilise ✉.`,
+        data.resent
+      );
+      fetchData();
+    } else {
+      showToast(data.error || "Échec de l'ajout.", false);
+    }
+  };
+
   const handleVoid = async (student: Student) => {
     if (student.voided) { showToast("Déjà annulé.", true); return; }
     const reason = prompt(
@@ -589,6 +615,12 @@ export default function AdminPage() {
                           style={actionBtn("#0a2540", "#38bdf8")}
                           title="Modifier"
                         >✎</button>
+                        <button
+                          onClick={() => handleAddGuest(s)}
+                          disabled={actionLoading === s.id + "-addguest" || s.guestCount >= 3}
+                          style={{ ...actionBtn("#052e16", "#4ade80"), opacity: s.guestCount >= 3 ? 0.35 : 1 }}
+                          title={s.guestCount >= 3 ? "Maximum 3 accompagnateurs" : "Ajouter un accompagnateur"}
+                        >{actionLoading === s.id + "-addguest" ? "…" : "➕"}</button>
                         <button
                           onClick={() => handleVoid(s)}
                           disabled={actionLoading === s.id + "-void" || s.voided}
