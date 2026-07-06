@@ -25,13 +25,13 @@ const rgb = (hex: string): [number, number, number] => {
 };
 
 // Geometry (mm, A4 portrait 210 x 297)
-const SEAT = 5.2, GX = 0.5, GY = 0.5, AISLE = 6;
+const SEAT = 5.75, GX = 0.4, GY = 0.4, AISLE = 5;
 const LEFTW = LEFT_COLS * SEAT + (LEFT_COLS - 1) * GX;
 const RIGHTW = 16 * SEAT + 15 * GX;
 const GRIDW = LEFTW + AISLE + RIGHTW;
 const STARTX = (210 - GRIDW) / 2;
 const RIGHTX = STARTX + LEFTW + AISLE;
-const GRID_TOP = 60;
+const GRID_TOP = 57;
 const ROW_PITCH = SEAT + GY;
 const GRID_H = (seatingGrid.length - 1) * ROW_PITCH + SEAT;
 
@@ -92,7 +92,7 @@ export async function GET() {
       const lbl = seatLabel(z);
       if (lbl) {
         doc.setTextColor(...rgb(PRINT[z].text));
-        doc.setFontSize(5);
+        doc.setFontSize(5.9);
         doc.text(lbl, x + SEAT / 2, y + SEAT / 2, { align: "center", baseline: "middle" });
       }
     });

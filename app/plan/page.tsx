@@ -20,7 +20,7 @@ const seatLabel = (z: ZoneKey) => (z !== "Admin" && z !== "Invite" && z !== "EMP
 
 // ── SVG geometry (A4 portrait canvas: 794 × 1123 @ 96dpi) ──
 const W = 794, H = 1123;
-const SEAT = 18, GX = 2, GY = 2, AISLE = 24;
+const SEAT = 20, GX = 1.5, GY = 1.5, AISLE = 20;
 const LEFTW = LEFT_COLS * SEAT + (LEFT_COLS - 1) * GX;      // 278
 const RIGHTW = 16 * SEAT + 15 * GX;                          // 318
 const GRIDW = LEFTW + AISLE + RIGHTW;                        // 620
@@ -39,7 +39,7 @@ export default function PlanPage() {
       seats.push(<rect key={`${r}-${c}`} x={x} y={y} width={SEAT} height={SEAT} rx={2} fill={PRINT[z].fill} stroke="#9a9a9a" strokeWidth={0.4} />);
       const lbl = seatLabel(z);
       if (lbl) seats.push(
-        <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2} textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={700} fill={PRINT[z].text}>{lbl}</text>
+        <text key={`t${r}-${c}`} x={x + SEAT / 2} y={y + SEAT / 2} textAnchor="middle" dominantBaseline="central" fontSize={9} fontWeight={700} fill={PRINT[z].text}>{lbl}</text>
       );
     });
   });
