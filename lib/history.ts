@@ -6,7 +6,8 @@ export type HistoryAction =
   | "suppression"
   | "renvoi"
   | "walk-in"
-  | "check-in";
+  | "check-in"
+  | "invitation";
 
 export interface HistoryEntry {
   date: string;

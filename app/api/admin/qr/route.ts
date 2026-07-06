@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
   const student = await getStudentById(studentId);
   if (!student) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const studentQR = await QRCode.toDataURL(`${BASE}/verify/${studentId}`, {
+  // The scanner resolves students by qrId (not the internal id) — encode qrId.
+  const studentQR = await QRCode.toDataURL(`${BASE}/verify/${student.qrId || studentId}`, {
     width: 280,
     margin: 2,
     color: { dark: "#0F2560", light: "#FFFFFF" },

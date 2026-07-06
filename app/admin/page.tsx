@@ -49,11 +49,11 @@ interface MediaItem {
 }
 
 type View = "login" | "dashboard";
-type Tab = "students" | "guests" | "history" | "gallery" | "wall";
+type Tab = "students" | "guests" | "vip" | "history" | "gallery" | "wall";
 
 interface HistoryEntry {
   date: string;
-  action: "modification" | "annulation" | "suppression" | "renvoi" | "walk-in" | "check-in";
+  action: "modification" | "annulation" | "suppression" | "renvoi" | "walk-in" | "check-in" | "invitation";
   studentId: string;
   name: string;
   details: string;
@@ -489,9 +489,11 @@ export default function AdminPage() {
             const voidedGuests = guests.length - activeGuests;
             const label = (base: string, active: number, voided: number) =>
               voided > 0 ? `${base} (${active}) · ${voided} annulé${voided === 1 ? "" : "s"}` : `${base} (${active})`;
+            const vipCount = students.filter((s) => s.classe === "VIP" && !s.voided).length;
             return [
               { key: "students" as Tab, label: label("Étudiants", activeStudents, voidedStudents) },
               { key: "guests" as Tab, label: label("Accompagnateurs", activeGuests, voidedGuests) },
+              { key: "vip" as Tab, label: `Invitations VIP (${vipCount})` },
               { key: "history" as Tab, label: "Historique" },
               { key: "gallery" as Tab, label: `Galerie (${mediaGallery.length})` },
               { key: "wall" as Tab, label: `Mur (${mediaWall.length})` },
@@ -543,6 +545,14 @@ export default function AdminPage() {
           <MediaPanel type="wall" items={mediaWall} onChange={fetchData} showToast={showToast} />
         ) : tab === "history" ? (
           <HistoryPanel entries={history} loading={historyLoading} onRefresh={fetchHistory} />
+        ) : tab === "vip" ? (
+          <VipPanel
+            vips={students.filter((s) => s.classe === "VIP")}
+            onChange={fetchData}
+            showToast={showToast}
+            onDelete={handleDelete}
+            onVoid={handleVoid}
+          />
         ) : tab === "guests" ? (
           <>
             <GuestTable
@@ -853,6 +863,7 @@ function HistoryPanel({ entries, loading, onRefresh }: { entries: HistoryEntry[]
       renvoi:       { bg: "#1e2a00", fg: "#F0B429", label: "Renvoi" },
       "walk-in":    { bg: "#1e3a5f", fg: "#60a5fa", label: "Walk-in" },
       "check-in":   { bg: "#052e16", fg: "#4ade80", label: "Check-in" },
+      invitation:   { bg: "#2a1a3f", fg: "#c084fc", label: "Invitation VIP" },
     };
     const c = map[a];
     return <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 12, background: c.bg, color: c.fg, fontSize: 11, fontWeight: 700, letterSpacing: 0.5 }}>{c.label}</span>;
@@ -907,6 +918,192 @@ function HistoryPanel({ entries, loading, onRefresh }: { entries: HistoryEntry[]
           <div style={{ padding: "12px 16px", color: "#6b7280", fontSize: 12 }}>
             {shown.length} entrée{shown.length === 1 ? "" : "s"}{shown.length !== entries.length ? ` (filtré de ${entries.length})` : ""}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function buildVipTicketSVG(name: string, title: string, qrDataUrl: string): string {
+  const nameSize = name.length > 18 ? Math.max(30, Math.round(58 * 18 / name.length)) : 58;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1400" height="600" viewBox="0 0 1400 600">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0A1A4A"/><stop offset="0.55" stop-color="#0F2560"/><stop offset="1" stop-color="#1C0F06"/>
+  </linearGradient></defs>
+  <rect width="1400" height="600" rx="24" fill="url(#bg)"/>
+  <rect x="14" y="14" width="1372" height="572" rx="18" fill="none" stroke="#F0B429" stroke-opacity="0.55" stroke-width="2"/>
+  <text x="90" y="112" font-family="Georgia, serif" font-size="46" letter-spacing="10" fill="#FFFFFF" font-weight="700">ESEN</text>
+  <text x="90" y="148" font-family="Georgia, serif" font-size="19" letter-spacing="6" fill="#F0B429">GRADUATION CEREMONY 2026</text>
+  <rect x="90" y="176" width="120" height="2.5" fill="#F0B429"/>
+  <text x="90" y="250" font-size="21" letter-spacing="8" fill="#F0B429" font-family="Arial, sans-serif" font-weight="700">INVITATION SPÉCIALE</text>
+  <text x="90" y="335" font-family="Georgia, serif" font-size="${nameSize}" fill="#FFFFFF" font-weight="700">${esc(name)}</text>
+  ${title ? `<text x="90" y="382" font-size="24" fill="#F5ECD7" opacity="0.85" font-family="Arial, sans-serif">${esc(title)}</text>` : ""}
+  <text x="90" y="492" font-size="23" fill="#F5ECD7" font-family="Arial, sans-serif">Jeudi 9 juillet 2026&#160;&#160;·&#160;&#160;16h00&#160;&#160;·&#160;&#160;UTICA</text>
+  <text x="90" y="532" font-size="16" fill="#8FA3C8" font-family="Arial, sans-serif">Présentez ce billet à l'entrée · ESEN Ambassadors</text>
+  <line x1="960" y1="60" x2="960" y2="540" stroke="#F0B429" stroke-opacity="0.35" stroke-dasharray="6 8" stroke-width="2"/>
+  <rect x="1010" y="90" width="330" height="420" rx="20" fill="#FFFFFF"/>
+  <image x="1045" y="118" width="260" height="260" href="${qrDataUrl}" xlink:href="${qrDataUrl}"/>
+  <text x="1175" y="428" text-anchor="middle" font-size="18" fill="#0F2560" font-weight="700" font-family="Arial, sans-serif">SCANNER À L'ENTRÉE</text>
+  <text x="1175" y="458" text-anchor="middle" font-size="14" fill="#888888" font-family="Arial, sans-serif">Billet personnel · usage unique</text>
+</svg>`;
+}
+
+async function svgToPngDataUrl(svg: string, w: number, h: number): Promise<string> {
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error("SVG raster failed"));
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function VipPanel({
+  vips, onChange, showToast, onDelete, onVoid,
+}: {
+  vips: Student[];
+  onChange: () => void;
+  showToast: (msg: string, ok: boolean) => void;
+  onDelete: (s: Student) => void;
+  onVoid: (s: Student) => void;
+}) {
+  const [name, setName] = useState("");
+  const [title, setTitle] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim().length < 2) return;
+    setCreating(true);
+    const res = await fetch("/api/admin/vip", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim(), title: title.trim() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setCreating(false);
+    if (res.ok) {
+      showToast(`Invitation créée pour ${data.name}.`, true);
+      setName(""); setTitle("");
+      onChange();
+    } else {
+      showToast(data.error || "Échec de la création.", false);
+    }
+  };
+
+  const download = async (s: Student, format: "png" | "pdf") => {
+    setBusy(s.id + format);
+    try {
+      const res = await fetch(`/api/admin/qr?studentId=${s.id}`);
+      if (!res.ok) throw new Error("qr fetch failed");
+      const { studentQR } = await res.json();
+      const svg = buildVipTicketSVG(s.firstName, s.specialty || "", studentQR);
+      const png = await svgToPngDataUrl(svg, 2100, 900);
+      const slug = s.firstName.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "") || "invite";
+      if (format === "png") {
+        const a = document.createElement("a");
+        a.href = png;
+        a.download = `Invitation-${slug}.png`;
+        a.click();
+      } else {
+        const { jsPDF } = await import("jspdf");
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [90, 210] });
+        const w = doc.internal.pageSize.getWidth();
+        const h = doc.internal.pageSize.getHeight();
+        doc.addImage(png, "PNG", 0, 0, w, h);
+        doc.save(`Invitation-${slug}.pdf`);
+      }
+      showToast(`Billet ${format.toUpperCase()} téléchargé.`, true);
+    } catch (err) {
+      console.error(err);
+      showToast("Échec de la génération du billet.", false);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const input: React.CSSProperties = {
+    padding: "11px 14px", borderRadius: 10, background: "#0a0f1e",
+    border: "1px solid #1e3a5f", color: "#fff", fontSize: 14, boxSizing: "border-box",
+  };
+
+  return (
+    <div>
+      {/* Create form */}
+      <form onSubmit={create} style={{ background: "#111827", border: "1px solid #1e3a5f", borderRadius: 14, padding: 20, marginBottom: 20 }}>
+        <div style={{ fontSize: 11, letterSpacing: 3, color: "#F0B429", fontWeight: 700, marginBottom: 12 }}>NOUVELLE INVITATION SPÉCIALE</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom complet (ex : M. Ahmed Ben Ali)" style={{ ...input, flex: "2 1 260px" }} />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre / fonction (optionnel, ex : Directeur ESEN)" style={{ ...input, flex: "2 1 260px" }} />
+          <button type="submit" disabled={creating || name.trim().length < 2} style={{
+            padding: "11px 24px", borderRadius: 10, background: "#1B3A8C", border: "1px solid #F0B429",
+            color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", flex: "0 0 auto",
+            opacity: creating || name.trim().length < 2 ? 0.5 : 1,
+          }}>{creating ? "…" : "➕ Créer l'invitation"}</button>
+        </div>
+        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 10 }}>
+          Le billet créé est scannable au portail comme tous les autres. Télécharge-le en PNG (à envoyer par WhatsApp/email) ou PDF (à imprimer).
+        </div>
+      </form>
+
+      {/* List */}
+      {vips.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 50, color: "#6b7280", background: "#111827", border: "1px solid #1e3a5f", borderRadius: 12 }}>
+          Aucune invitation spéciale pour le moment.
+        </div>
+      ) : (
+        <div style={{ background: "#111827", border: "1px solid #1e3a5f", borderRadius: 12, overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#0a1224", color: "#9ca3af", textAlign: "left", fontSize: 11, letterSpacing: 1 }}>
+                {["NOM", "TITRE", "CRÉÉE LE", "CHECK-IN", "ACTIONS"].map((h) => (
+                  <th key={h} style={{ padding: "12px 16px", borderBottom: "1px solid #1e2a3f", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {vips.map((s, i) => (
+                <tr key={s.id} style={{ background: i % 2 === 0 ? "#0d1526" : "#0a0f1e", borderBottom: "1px solid #1e2a3f", opacity: s.voided ? 0.55 : 1 }}>
+                  <td style={{ padding: "12px 16px", fontWeight: 600, color: "#f9fafb", whiteSpace: "nowrap" }}>
+                    {s.firstName}
+                    {s.voided && <span style={{ marginLeft: 8, fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "#5a1414", color: "#fca5a5", letterSpacing: 0.5 }}>ANNULÉ</span>}
+                  </td>
+                  <td style={{ padding: "12px 16px", color: "#9ca3af" }}>{s.specialty || "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#6b7280", whiteSpace: "nowrap", fontSize: 12 }}>{new Date(s.registeredAt).toLocaleString("fr-TN")}</td>
+                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                    <StatusBadge ok={s.scanned} label={s.scanned ? "Entré(e)" : "Pas encore"} />
+                  </td>
+                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => download(s, "png")} disabled={busy === s.id + "png"} style={actionBtn("#0a2540", "#38bdf8")} title="Télécharger en PNG">
+                        {busy === s.id + "png" ? "…" : "🖼 PNG"}
+                      </button>
+                      <button onClick={() => download(s, "pdf")} disabled={busy === s.id + "pdf"} style={actionBtn("#1e2a00", "#F0B429")} title="Télécharger en PDF">
+                        {busy === s.id + "pdf" ? "…" : "📄 PDF"}
+                      </button>
+                      <button onClick={() => onVoid(s)} disabled={s.voided} style={actionBtn("#2d1a05", "#fb923c")} title={s.voided ? "Déjà annulé" : "Annuler le billet"}>🚫</button>
+                      <button onClick={() => onDelete(s)} style={actionBtn("#2d0a0a", "#f87171")} title="Supprimer">✕</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
