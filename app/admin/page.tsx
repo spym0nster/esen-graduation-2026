@@ -956,7 +956,8 @@ async function svgToPngDataUrl(svg: string, w: number, h: number): Promise<strin
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   try {
-    const img = new Image();
+    // NB: `Image` in this module is next/image — use the DOM element instead.
+    const img = document.createElement("img");
     await new Promise<void>((res, rej) => {
       img.onload = () => res();
       img.onerror = () => rej(new Error("SVG raster failed"));
