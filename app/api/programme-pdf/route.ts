@@ -17,6 +17,12 @@ export async function GET(req: NextRequest) {
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: size });
 
+  // jsPDF's align:"center" ignores charSpace — center manually.
+  const centerSpaced = (text: string, cx: number, y: number, cs: number) => {
+    const w = doc.getTextWidth(text) + cs * (text.length - 1);
+    doc.text(text, cx - w / 2, y, { charSpace: cs });
+  };
+
   // Background — vertical gradient bands: #0A1A4A → #0F2560 → #1C0F06
   const stops: Array<[number, [number, number, number]]> = [
     [0, [10, 26, 74]], [0.55, [15, 37, 96]], [1, [28, 15, 6]],
@@ -45,11 +51,11 @@ export async function GET(req: NextRequest) {
   doc.setTextColor(...WHITE);
   doc.setFont("times", "bold");
   doc.setFontSize(s(25));
-  doc.text("ESEN", s(74), s(23), { align: "center", charSpace: s(2.5) });
+  centerSpaced("ESEN", s(74), s(23), s(2.5));
   doc.setTextColor(...GOLD);
   doc.setFont("times", "normal");
   doc.setFontSize(s(8.5));
-  doc.text("GRADUATION CEREMONY 2026", s(74), s(30), { align: "center", charSpace: s(1.6) });
+  centerSpaced("GRADUATION CEREMONY 2026", s(74), s(30), s(1.6));
   doc.setDrawColor(...GOLD);
   doc.setLineWidth(s(0.4));
   doc.line(s(56), s(34.5), s(92), s(34.5));
@@ -111,8 +117,9 @@ export async function GET(req: NextRequest) {
     y += BASE_PITCH + (item.lines.length - 1) * WRAP_EXTRA;
   });
 
-  // Footer — Ambassadors logo in a white disc + recto pointer
-  const footTop = Math.max(lastY + 8, 188);
+  // Footer — Ambassadors logo in a white disc + recto pointer.
+  // Kept clear of the gold frame (frame bottom edge is at y = 205.5).
+  const footTop = Math.min(Math.max(lastY + 8, 183), 186);
   doc.setDrawColor(...GOLD);
   doc.setLineWidth(s(0.4));
   doc.line(s(56), s(footTop), s(92), s(footTop));
@@ -126,17 +133,17 @@ export async function GET(req: NextRequest) {
     const res = await fetch(`${BASE_URL}/images/logos/ambassadors.png`);
     if (res.ok) {
       const logo = `data:image/png;base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}`;
-      const cy = footTop + 11.5;
+      const cy = footTop + 12; // disc bottom = footTop + 17 ≤ 203 → safely inside frame
       doc.setFillColor(255, 255, 255);
-      doc.circle(s(74), s(cy), s(5.6), "F");
-      doc.addImage(logo, "PNG", s(74 - 4.6), s(cy - 4.6), s(9.2), s(9.2));
+      doc.circle(s(74), s(cy), s(5), "F");
+      doc.addImage(logo, "PNG", s(74 - 4.1), s(cy - 4.1), s(8.2), s(8.2));
     } else {
       throw new Error("logo fetch failed");
     }
   } catch {
     doc.setTextColor(...GOLD);
     doc.setFontSize(s(7));
-    doc.text("ESEN AMBASSADORS", s(74), s(footTop + 11), { align: "center", charSpace: s(1.2) });
+    centerSpaced("ESEN AMBASSADORS", s(74), s(footTop + 11), s(1.2));
   }
 
   const buf = Buffer.from(doc.output("arraybuffer"));

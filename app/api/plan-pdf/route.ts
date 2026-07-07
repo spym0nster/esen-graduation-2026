@@ -45,10 +45,16 @@ export async function GET(req: NextRequest) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: size });
   doc.setFont("helvetica", "normal");
 
+  // jsPDF's align:"center" ignores charSpace — center manually.
+  const centerSpaced = (text: string, cx: number, y: number, cs: number) => {
+    const w = doc.getTextWidth(text) + cs * (text.length - 1);
+    doc.text(text, cx - w / 2, y, { charSpace: cs });
+  };
+
   // Header
   doc.setTextColor(...rgb("#B8901A"));
   doc.setFontSize(s(8));
-  doc.text("ESEN  -  GRADUATION 2026", s(105), s(16), { align: "center", charSpace: s(1) });
+  centerSpaced("ESEN  -  GRADUATION 2026", s(105), s(16), s(1));
   doc.setTextColor(...rgb("#0F2560"));
   doc.setFont("helvetica", "bold");
   doc.setFontSize(s(22));
@@ -67,14 +73,14 @@ export async function GET(req: NextRequest) {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(s(11));
-  doc.text("SCENE", s(105), s(48.2), { align: "center", charSpace: s(2) });
+  centerSpaced("SCENE", s(105), s(48.2), s(2));
 
   // Column headers
   doc.setFontSize(s(8));
   doc.setTextColor(50, 50, 50);
-  doc.text("PROFS - ADMIN / INVITES", s(STARTX + LEFTW / 2), s(56), { align: "center", charSpace: s(0.4) });
+  centerSpaced("PROFS - ADMIN / INVITES", s(STARTX + LEFTW / 2), s(56), s(0.4));
   doc.setTextColor(...rgb("#B8901A"));
-  doc.text("DIPLOMES", s(RIGHTX + RIGHTW / 2), s(56), { align: "center", charSpace: s(0.6) });
+  centerSpaced("DIPLOMES", s(RIGHTX + RIGHTW / 2), s(56), s(0.6));
 
   // Aisle dashed line
   doc.setDrawColor(196, 196, 196);
@@ -140,7 +146,7 @@ export async function GET(req: NextRequest) {
   // Footer
   doc.setTextColor(170, 170, 170);
   doc.setFontSize(s(7));
-  doc.text("ESEN AMBASSADORS  -  PLAN INDICATIF", s(105), s(290), { align: "center", charSpace: s(0.5) });
+  centerSpaced("ESEN AMBASSADORS  -  PLAN INDICATIF", s(105), s(290), s(0.5));
 
   const buf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(buf, {
