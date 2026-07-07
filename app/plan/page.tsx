@@ -68,7 +68,8 @@ export default function PlanPage() {
         <button className="btn ghost" onClick={() => history.back()}>← Retour</button>
         <button className="btn ghost" onClick={() => window.print()}>🖨 Imprimer</button>
         <button className="btn ghost" onClick={() => window.open("/api/plan-pdf", "_blank")}>⬇ PDF A4</button>
-        <button className="btn" onClick={() => window.open("/api/plan-pdf?size=a5", "_blank")}>⬇ PDF A5 (flyer)</button>
+        <button className="btn" onClick={() => window.open("/api/plan-pdf?size=a5", "_blank")}>⬇ PDF A5 (recto)</button>
+        <button className="btn" onClick={() => window.open("/api/programme-pdf", "_blank")}>⬇ Programme A5 (verso)</button>
       </div>
 
       <div className="card">
