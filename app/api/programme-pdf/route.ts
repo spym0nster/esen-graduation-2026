@@ -63,16 +63,26 @@ export async function GET(req: NextRequest) {
   doc.setTextColor(...MUTED);
   doc.text("Jeudi 9 juillet 2026  ·  UTICA", s(74), s(51.5), { align: "center" });
 
-  // Timeline
-  const START_Y = 63, PITCH = 10.8, LINE_X = 31;
-  const lastY = START_Y + (programmeItems.length - 1) * PITCH;
+  // Timeline — dynamic pitch: long titles wrap onto a second line.
+  const START_Y = 60, BASE_PITCH = 9.6, WRAP_EXTRA = 3.6, LINE_X = 31;
+  const TITLE_MAX_W = 103; // mm available for the title column (design units)
+
+  // Pre-measure so the connecting line matches the real height.
+  const items = programmeItems.map((item) => {
+    doc.setFont("helvetica", item.highlight ? "bold" : "normal");
+    doc.setFontSize(s(item.highlight ? 9.8 : 9.2));
+    const lines: string[] = doc.splitTextToSize(item.titleFr, s(TITLE_MAX_W));
+    return { ...item, lines };
+  });
+  const totalH = items.reduce((h, it) => h + BASE_PITCH + (it.lines.length - 1) * WRAP_EXTRA, 0);
+  const lastY = START_Y + totalH - BASE_PITCH;
+
   doc.setDrawColor(...GOLD);
   doc.setLineWidth(s(0.35));
   doc.line(s(LINE_X), s(START_Y - 4), s(LINE_X), s(lastY + 4));
 
-  programmeItems.forEach((item, i) => {
-    const y = START_Y + i * PITCH;
-
+  let y = START_Y;
+  items.forEach((item) => {
     // Dot — highlights get a bigger solid gold dot
     if (item.highlight) {
       doc.setFillColor(...GOLD);
@@ -90,26 +100,44 @@ export async function GET(req: NextRequest) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(s(9.5));
     doc.setTextColor(...GOLD);
-    doc.text(item.time, s(LINE_X - 5), s(y), { align: "right" });
+    doc.text(item.time.replace(":", "h"), s(LINE_X - 5), s(y), { align: "right" });
 
-    // Title — gold for highlights, white otherwise
+    // Title — gold for highlights, white otherwise; wrapped lines
     doc.setFont("helvetica", item.highlight ? "bold" : "normal");
-    doc.setFontSize(s(item.highlight ? 10 : 9.3));
+    doc.setFontSize(s(item.highlight ? 9.8 : 9.2));
     doc.setTextColor(...(item.highlight ? GOLD : WHITE));
-    doc.text(item.titleFr, s(LINE_X + 6), s(y));
+    item.lines.forEach((ln, li) => doc.text(ln, s(LINE_X + 6), s(y + li * WRAP_EXTRA)));
+
+    y += BASE_PITCH + (item.lines.length - 1) * WRAP_EXTRA;
   });
 
-  // Footer
+  // Footer — Ambassadors logo in a white disc + recto pointer
+  const footTop = Math.max(lastY + 8, 188);
   doc.setDrawColor(...GOLD);
   doc.setLineWidth(s(0.4));
-  doc.line(s(56), s(191), s(92), s(191));
+  doc.line(s(56), s(footTop), s(92), s(footTop));
   doc.setFont("helvetica", "normal");
   doc.setFontSize(s(7.2));
   doc.setTextColor(...MUTED);
-  doc.text("Présentez votre billet QR à l'entrée · Plan de la salle au recto", s(74), s(196.5), { align: "center" });
-  doc.setTextColor(...GOLD);
-  doc.setFontSize(s(7));
-  doc.text("ESEN AMBASSADORS", s(74), s(201.5), { align: "center", charSpace: s(1.2) });
+  doc.text("Présentez votre billet QR à l'entrée · Plan de la salle au recto", s(74), s(footTop + 4.5), { align: "center" });
+
+  try {
+    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://esen-graduation-2026.vercel.app";
+    const res = await fetch(`${BASE_URL}/images/logos/ambassadors.png`);
+    if (res.ok) {
+      const logo = `data:image/png;base64,${Buffer.from(await res.arrayBuffer()).toString("base64")}`;
+      const cy = footTop + 11.5;
+      doc.setFillColor(255, 255, 255);
+      doc.circle(s(74), s(cy), s(5.6), "F");
+      doc.addImage(logo, "PNG", s(74 - 4.6), s(cy - 4.6), s(9.2), s(9.2));
+    } else {
+      throw new Error("logo fetch failed");
+    }
+  } catch {
+    doc.setTextColor(...GOLD);
+    doc.setFontSize(s(7));
+    doc.text("ESEN AMBASSADORS", s(74), s(footTop + 11), { align: "center", charSpace: s(1.2) });
+  }
 
   const buf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(buf, {
