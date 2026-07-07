@@ -187,29 +187,41 @@ export default function AdminPage() {
     }
   };
 
-  const handleAddGuest = async (student: Student) => {
-    if (student.guestCount >= 3) { showToast("Maximum 3 accompagnateurs déjà atteint.", false); return; }
-    if (!confirm(
-      `Ajouter un ${student.guestCount + 1}e accompagnateur pour ${student.firstName} ${student.lastName} ?\n\nUn nouveau billet QR sera créé et l'email de tickets sera renvoyé.`
-    )) return;
-    setActionLoading(student.id + "-addguest");
-    const res = await fetch("/api/admin/add-guest", {
+  const [guestModal, setGuestModal] = useState<Student | null>(null);
+  const [guestTarget, setGuestTarget] = useState(0);
+  const [guestResend, setGuestResend] = useState(true);
+  const [guestBusy, setGuestBusy] = useState(false);
+
+  const openGuestModal = (student: Student) => {
+    setGuestModal(student);
+    setGuestTarget(student.guestCount || 0);
+    setGuestResend(!!student.email);
+  };
+
+  const submitGuestModal = async () => {
+    if (!guestModal) return;
+    setGuestBusy(true);
+    const res = await fetch("/api/admin/set-guests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: student.id, resend: true }),
+      body: JSON.stringify({
+        studentId: guestModal.id,
+        guestCount: guestTarget,
+        resend: guestResend && !!guestModal.email,
+      }),
     });
     const data = await res.json().catch(() => ({}));
-    setActionLoading(null);
+    setGuestBusy(false);
     if (res.ok) {
-      showToast(
-        data.resent
-          ? `Accompagnateur ajouté (${data.guestCount}/3) — tickets renvoyés.`
-          : `Accompagnateur ajouté (${data.guestCount}/3) — mais l'email a échoué, utilise ✉.`,
-        data.resent
+      setGuestModal(null);
+      if (data.unchanged) showToast("Aucun changement.", true);
+      else showToast(
+        `Accompagnateurs : ${data.previous} → ${data.guestCount}${data.resent ? " · tickets renvoyés" : ""}.`,
+        true
       );
       fetchData();
     } else {
-      showToast(data.error || "Échec de l'ajout.", false);
+      showToast(data.error || "Échec de la mise à jour.", false);
     }
   };
 
@@ -626,11 +638,10 @@ export default function AdminPage() {
                           title="Modifier"
                         >✎</button>
                         <button
-                          onClick={() => handleAddGuest(s)}
-                          disabled={actionLoading === s.id + "-addguest" || s.guestCount >= 3}
-                          style={{ ...actionBtn("#052e16", "#4ade80"), opacity: s.guestCount >= 3 ? 0.35 : 1 }}
-                          title={s.guestCount >= 3 ? "Maximum 3 accompagnateurs" : "Ajouter un accompagnateur"}
-                        >{actionLoading === s.id + "-addguest" ? "…" : "➕"}</button>
+                          onClick={() => openGuestModal(s)}
+                          style={actionBtn("#052e16", "#4ade80")}
+                          title="Gérer les accompagnateurs"
+                        >➕</button>
                         <button
                           onClick={() => handleVoid(s)}
                           disabled={actionLoading === s.id + "-void" || s.voided}
@@ -838,6 +849,92 @@ export default function AdminPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Guest Count Modal */}
+      {guestModal && (
+        <div
+          onClick={() => !guestBusy && setGuestModal(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)",
+            zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#111827", border: "1px solid #1e3a5f", borderRadius: 16,
+              padding: 28, width: "100%", maxWidth: 440,
+              fontFamily: "'Inter','Segoe UI',sans-serif", color: "#fff",
+            }}
+          >
+            <div style={{ fontSize: 11, letterSpacing: 4, color: "#F0B429", fontWeight: 700, marginBottom: 6 }}>
+              ACCOMPAGNATEURS
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+              {guestModal.firstName} {guestModal.lastName}
+            </div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 22 }}>
+              Actuellement : {guestModal.guestCount} accompagnateur{guestModal.guestCount === 1 ? "" : "s"}
+            </div>
+
+            {/* Stepper */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 18, marginBottom: 18 }}>
+              <button
+                onClick={() => setGuestTarget((n) => Math.max(0, n - 1))}
+                disabled={guestTarget <= 0}
+                style={{ width: 52, height: 52, borderRadius: 12, background: "#2d0a0a", border: "1px solid #7f1d1d", color: "#f87171", fontSize: 26, fontWeight: 700, cursor: "pointer", opacity: guestTarget <= 0 ? 0.35 : 1 }}
+              >−</button>
+              <div style={{ minWidth: 90, textAlign: "center" }}>
+                <div style={{ fontSize: 46, fontWeight: 800, color: guestTarget === guestModal.guestCount ? "#fff" : "#F0B429", lineHeight: 1 }}>{guestTarget}</div>
+                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>invité{guestTarget === 1 ? "" : "s"}</div>
+              </div>
+              <button
+                onClick={() => setGuestTarget((n) => Math.min(10, n + 1))}
+                disabled={guestTarget >= 10}
+                style={{ width: 52, height: 52, borderRadius: 12, background: "#052e16", border: "1px solid #16a34a", color: "#4ade80", fontSize: 26, fontWeight: 700, cursor: "pointer", opacity: guestTarget >= 10 ? 0.35 : 1 }}
+              >+</button>
+            </div>
+
+            {/* What will happen */}
+            {guestTarget !== guestModal.guestCount && (
+              <div style={{
+                padding: "10px 14px", borderRadius: 8, fontSize: 12.5, lineHeight: 1.55, marginBottom: 16,
+                background: guestTarget > guestModal.guestCount ? "#052e16" : "#2d1a05",
+                border: `1px solid ${guestTarget > guestModal.guestCount ? "#16a34a" : "#b45309"}`,
+                color: guestTarget > guestModal.guestCount ? "#86efac" : "#fdba74",
+              }}>
+                {guestTarget > guestModal.guestCount
+                  ? `${guestTarget - guestModal.guestCount} nouveau${guestTarget - guestModal.guestCount === 1 ? "" : "x"} billet${guestTarget - guestModal.guestCount === 1 ? "" : "s"} QR sera${guestTarget - guestModal.guestCount === 1 ? "" : "ont"} créé${guestTarget - guestModal.guestCount === 1 ? "" : "s"}.`
+                  : `Les ${guestModal.guestCount - guestTarget} dernier${guestModal.guestCount - guestTarget === 1 ? "" : "s"} billet${guestModal.guestCount - guestTarget === 1 ? "" : "s"} sera${guestModal.guestCount - guestTarget === 1 ? "" : "ont"} supprimé${guestModal.guestCount - guestTarget === 1 ? "" : "s"} — leur QR ne scannera plus au portail.`}
+              </div>
+            )}
+
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: guestModal.email ? "#9ca3af" : "#4b5563", cursor: guestModal.email ? "pointer" : "not-allowed", marginBottom: 22 }}>
+              <input
+                type="checkbox"
+                checked={guestResend && !!guestModal.email}
+                disabled={!guestModal.email}
+                onChange={(e) => setGuestResend(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: "#F0B429" }}
+              />
+              Renvoyer l&apos;email de tickets{!guestModal.email ? " (pas d'email enregistré)" : ""}
+            </label>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setGuestModal(null)}
+                disabled={guestBusy}
+                style={{ padding: "10px 18px", borderRadius: 8, background: "#1f2937", border: "1px solid #374151", color: "#9ca3af", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >Annuler</button>
+              <button
+                onClick={submitGuestModal}
+                disabled={guestBusy || guestTarget === guestModal.guestCount}
+                style={{ padding: "10px 20px", borderRadius: 8, background: "#1B3A8C", border: "1px solid #F0B429", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: guestBusy || guestTarget === guestModal.guestCount ? 0.5 : 1 }}
+              >{guestBusy ? "…" : "Enregistrer"}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
