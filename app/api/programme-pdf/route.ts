@@ -9,13 +9,11 @@ const WHITE: [number, number, number] = [255, 255, 255];
 const MUTED: [number, number, number] = [170, 180, 205];
 
 // Ceremony-styled programme, designed in A5 mm (148 x 210) — the flyer verso
-// of the seating plan. ?size=a4 scales the same layout up by 210/148.
-export async function GET(req: NextRequest) {
-  const size = new URL(req.url).searchParams.get("size") === "a4" ? "a4" : "a5";
-  const k = size === "a4" ? 210 / 148 : 1;
+// of the seating plan. `k` scales the A5 design units up to the target page
+// (210/148 for A4). drawProgramme paints into any A5/A4 page, including one
+// page of a multi-page flyer.
+export async function drawProgramme(doc: jsPDF, k: number) {
   const s = (v: number) => v * k;
-
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: size });
 
   // jsPDF's align:"center" ignores charSpace — center manually.
   const centerSpaced = (text: string, cx: number, y: number, cs: number) => {
@@ -145,6 +143,14 @@ export async function GET(req: NextRequest) {
     doc.setFontSize(s(7));
     centerSpaced("ESEN AMBASSADORS", s(74), s(footTop + 11), s(1.2));
   }
+}
+
+export async function GET(req: NextRequest) {
+  const size = new URL(req.url).searchParams.get("size") === "a4" ? "a4" : "a5";
+  const k = size === "a4" ? 210 / 148 : 1;
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: size });
+  await drawProgramme(doc, k);
 
   const buf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(buf, {

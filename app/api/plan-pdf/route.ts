@@ -25,10 +25,10 @@ const rgb = (hex: string): [number, number, number] => {
 };
 
 // Layout designed in A4 mm (210 x 297). A5 shares the exact aspect ratio, so
-// ?size=a5 renders the same drawing uniformly scaled by 148/210.
-export async function GET(req: NextRequest) {
-  const size = new URL(req.url).searchParams.get("size") === "a5" ? "a5" : "a4";
-  const k = size === "a5" ? 148 / 210 : 1;
+// the same drawing renders uniformly scaled by 148/210. `k` is the scale from
+// A4 design units to the target page; drawPlan can paint into any A4/A5 page,
+// including one page of a multi-page flyer.
+export function drawPlan(doc: jsPDF, k: number) {
   const s = (v: number) => v * k;
 
   // Geometry (A4 mm, all scaled through s())
@@ -42,7 +42,6 @@ export async function GET(req: NextRequest) {
   const ROW_PITCH = SEAT + GY;
   const GRID_H = (seatingGrid.length - 1) * ROW_PITCH + SEAT;
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: size });
   doc.setFont("helvetica", "normal");
 
   // jsPDF's align:"center" ignores charSpace — center manually.
@@ -147,6 +146,14 @@ export async function GET(req: NextRequest) {
   doc.setTextColor(170, 170, 170);
   doc.setFontSize(s(7));
   centerSpaced("ESEN AMBASSADORS  -  PLAN INDICATIF", s(105), s(290), s(0.5));
+}
+
+export async function GET(req: NextRequest) {
+  const size = new URL(req.url).searchParams.get("size") === "a5" ? "a5" : "a4";
+  const k = size === "a5" ? 148 / 210 : 1;
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: size });
+  drawPlan(doc, k);
 
   const buf = Buffer.from(doc.output("arraybuffer"));
   return new NextResponse(buf, {

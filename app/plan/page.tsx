@@ -70,6 +70,7 @@ export default function PlanPage() {
         <button className="btn ghost" onClick={() => window.open("/api/plan-pdf", "_blank")}>⬇ PDF A4</button>
         <button className="btn" onClick={() => window.open("/api/plan-pdf?size=a5", "_blank")}>⬇ PDF A5 (recto)</button>
         <button className="btn" onClick={() => window.open("/api/programme-pdf", "_blank")}>⬇ Programme A5 (verso)</button>
+        <button className="btn" onClick={() => window.open("/api/flyer-pdf", "_blank")}>⬇ Flyer A5 (recto + verso)</button>
       </div>
 
       <div className="card">
