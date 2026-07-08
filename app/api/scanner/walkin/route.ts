@@ -3,12 +3,10 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { saveStudent } from "@/lib/rsvpService";
 import { appendGuestRows } from "@/lib/googleSheets";
-import { isScannerAuthed } from "@/lib/scannerAuth";
 
 // On-the-spot admission for people who never registered (no QR).
 // Creates a student already marked checked-in, tagged "Walk-in".
 export async function POST(req: Request) {
-  if (!(await isScannerAuthed())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const body = await req.json();
     const firstName = String(body.firstName || "").trim().slice(0, 60);

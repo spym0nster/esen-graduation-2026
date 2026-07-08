@@ -1,7 +1,6 @@
 export const runtime = 'nodejs';
 import { NextResponse, after } from 'next/server';
 import { getStudentByQrId, getGuestById, updateStudent, updateGuest, getVoidedQrIds } from '@/lib/rsvpService';
-import { isScannerAuthed } from '@/lib/scannerAuth';
 import { logHistory } from '@/lib/history';
 
 function clientIp(req: Request): string {
@@ -13,7 +12,6 @@ function clientIp(req: Request): string {
 }
 
 export async function POST(req: Request) {
-  if (!(await isScannerAuthed())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const ip = clientIp(req);
   const body = await req.json();
   let { id } = body;

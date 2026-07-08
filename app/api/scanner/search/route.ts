@@ -1,12 +1,10 @@
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { getAllStudents, getAllGuests } from '@/lib/rsvpService';
-import { isScannerAuthed } from '@/lib/scannerAuth';
 
 // Fallback lookup for check-in when a QR code won't scan. Returns matching
 // students and guests with the id to pass to /api/scanner/verify.
 export async function GET(req: Request) {
-  if (!(await isScannerAuthed())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const q = (new URL(req.url).searchParams.get('q') || '').trim().toLowerCase();
   if (q.length < 2) return NextResponse.json({ results: [] });
 
