@@ -1,8 +1,9 @@
 export const runtime = "nodejs";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { saveStudent } from "@/lib/rsvpService";
 import { appendGuestRows } from "@/lib/googleSheets";
+import { recordSpecialtyCheckIn } from "@/lib/specialtySheets";
 
 // On-the-spot admission for people who never registered (no QR).
 // Creates a student already marked checked-in, tagged "Walk-in".
@@ -46,6 +47,8 @@ export async function POST(req: Request) {
     if (guestCount > 0) {
       await appendGuestRows(studentId, `${firstName} ${lastName}`, guestIds, true);
     }
+
+    after(() => recordSpecialtyCheckIn(classe, specialty, `${firstName} ${lastName}`.trim(), now));
 
     return NextResponse.json({ success: true, name: `${firstName} ${lastName}`, guestCount });
   } catch (err) {

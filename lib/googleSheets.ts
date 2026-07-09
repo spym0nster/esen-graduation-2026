@@ -119,6 +119,51 @@ export async function sheetUpdateRow(
   }
 }
 
+/** Create the sheet tab if it doesn't already exist. Safe to call repeatedly. */
+export async function ensureSheetExists(sheetName: string): Promise<void> {
+  const accessToken = await getGoogleAccessToken();
+
+  const metaResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`,
+    {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    }
+  );
+
+  if (!metaResponse.ok) {
+    const errText = await metaResponse.text();
+    console.error('[Sheets] Metadata fetch failed:', errText);
+    throw new Error('Failed to fetch sheet metadata');
+  }
+
+  const metaData = await metaResponse.json();
+  const exists = (metaData.sheets || []).some(
+    (s: { properties?: { title?: string } }) => s.properties?.title === sheetName
+  );
+  if (exists) return;
+
+  const addResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requests: [{ addSheet: { properties: { title: sheetName } } }],
+      }),
+    }
+  );
+
+  if (!addResponse.ok) {
+    const errText = await addResponse.text();
+    console.error('[Sheets] Add sheet failed:', errText);
+    throw new Error(`Failed to create sheet tab "${sheetName}"`);
+  }
+}
+
 /** Delete one or more rows by their 1-based sheet row numbers. */
 export async function sheetDeleteRows(sheetName: string, rowNumbers: number[]): Promise<void> {
   if (rowNumbers.length === 0) return;

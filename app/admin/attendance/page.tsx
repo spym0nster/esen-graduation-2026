@@ -79,7 +79,7 @@ export default function AttendancePage() {
 
   return (
     <div style={{ minHeight: "100dvh", background: "#0F2560", color: "#fff", fontFamily: "'Inter','Segoe UI',sans-serif", paddingBottom: 90 }}>
-      <div style={{ padding: "clamp(16px,3vw,32px) clamp(16px,3vw,32px) 8px" }}>
+      <div className="no-print" style={{ padding: "clamp(16px,3vw,32px) clamp(16px,3vw,32px) 8px" }}>
         <div style={{ textAlign: "center", fontSize: "clamp(20px,3.2vw,38px)", fontWeight: 800, color: "#F0B429", letterSpacing: 1 }}>
           🎓 ESEN GRADUATION 2026 — PRÉSENCES EN TEMPS RÉEL
         </div>
@@ -96,6 +96,15 @@ export default function AttendancePage() {
         <div style={{ textAlign: "center", marginTop: 10, fontSize: 13, color: "rgba(255,255,255,0.55)" }}>
           Dernière mise à jour : {lastUpdatedLabel} · Actualisation dans {secondsLeft}s
         </div>
+
+        <div style={{ textAlign: "center", marginTop: 14 }}>
+          <button
+            onClick={() => window.print()}
+            style={{ padding: "10px 20px", borderRadius: 8, background: "#F0B429", border: "none", color: "#0A1A4A", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+          >
+            🖨 Imprimer les feuilles (une par spécialité)
+          </button>
+        </div>
       </div>
 
       <div
@@ -111,8 +120,8 @@ export default function AttendancePage() {
           const key = `${g.classe}|${g.specialty}`;
           const absentOpen = openAbsent.has(key);
           return (
-            <div key={key} style={{ background: "#1B3A8C", borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(240,180,41,0.25)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(0,0,0,0.15)" }}>
+            <div key={key} className="group-sheet" style={{ background: "#1B3A8C", borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column", border: "1px solid rgba(240,180,41,0.25)" }}>
+              <div className="sheet-title" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "rgba(0,0,0,0.15)" }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{g.label}</div>
                 <div style={{ background: "#F0B429", color: "#0A1A4A", fontWeight: 800, fontSize: 13, borderRadius: 12, padding: "3px 10px" }}>
                   {g.present.length} présents
@@ -145,6 +154,7 @@ export default function AttendancePage() {
                 <div style={{ marginTop: "auto", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
                   <button
                     onClick={() => toggleAbsent(key)}
+                    className="no-print"
                     style={{
                       width: "100%",
                       textAlign: "left",
@@ -159,13 +169,14 @@ export default function AttendancePage() {
                   >
                     {absentOpen ? "▾" : "▸"} ⚠ Non scannés — peut-être absents ({g.absent.length})
                   </button>
-                  {absentOpen && (
-                    <div style={{ padding: "0 16px 12px" }}>
-                      {g.absent.map((p) => (
-                        <div key={p.id} style={{ fontSize: 14, color: "rgba(240,180,41,0.75)", padding: "3px 0" }}>{p.name}</div>
-                      ))}
+                  <div className="absent-list" style={{ display: absentOpen ? "block" : "none", padding: "0 16px 12px" }}>
+                    <div className="print-only-heading" style={{ display: "none", fontWeight: 700, fontSize: 13, padding: "6px 0", color: "#000" }}>
+                      ⚠ Non scannés — peut-être absents ({g.absent.length})
                     </div>
-                  )}
+                    {g.absent.map((p) => (
+                      <div key={p.id} style={{ fontSize: 14, color: "rgba(240,180,41,0.75)", padding: "3px 0" }}>{p.name}</div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -173,7 +184,7 @@ export default function AttendancePage() {
         })}
       </div>
 
-      <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: "#0A1A4A", borderTop: "1px solid rgba(240,180,41,0.3)", padding: "10px clamp(16px,3vw,32px)" }}>
+      <div className="no-print" style={{ position: "fixed", left: 0, right: 0, bottom: 0, background: "#0A1A4A", borderTop: "1px solid rgba(240,180,41,0.3)", padding: "10px clamp(16px,3vw,32px)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
           <span>Progression</span>
           <span>{totalPresent} / {totalStudents}</span>
@@ -197,6 +208,59 @@ export default function AttendancePage() {
         }
         @media (max-width: 700px) {
           .attendance-grid { grid-template-columns: 1fr !important; }
+        }
+        @media print {
+          .no-print { display: none !important; }
+          body, html { background: #fff !important; }
+          .attendance-grid {
+            display: block !important;
+            padding: 0 !important;
+          }
+          .group-sheet {
+            background: #fff !important;
+            color: #000 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            break-inside: avoid;
+            min-height: 100vh;
+          }
+          .group-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+          .sheet-title {
+            background: none !important;
+            border-bottom: 2px solid #000;
+            padding: 0 0 10px 0 !important;
+          }
+          .sheet-title > div:first-child {
+            font-size: 22px !important;
+            color: #000 !important;
+          }
+          .sheet-title > div:last-child {
+            background: none !important;
+            color: #000 !important;
+            font-size: 15px !important;
+            border: 1px solid #000;
+          }
+          .group-sheet > div > div {
+            color: #000 !important;
+            background: none !important;
+            border-bottom: 1px solid #ccc;
+          }
+          .absent-list {
+            display: block !important;
+            border-top: 2px solid #000;
+            margin-top: 10px;
+          }
+          .absent-list > div {
+            color: #000 !important;
+          }
+          .print-only-heading {
+            display: block !important;
+          }
         }
       `}</style>
     </div>

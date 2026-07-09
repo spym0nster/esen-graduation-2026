@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 import { NextResponse, after } from 'next/server';
 import { getStudentByQrId, getGuestById, updateStudent, updateGuest, getVoidedQrIds } from '@/lib/rsvpService';
 import { logHistory } from '@/lib/history';
+import { recordSpecialtyCheckIn } from '@/lib/specialtySheets';
 
 function clientIp(req: Request): string {
   return (
@@ -66,6 +67,7 @@ export async function POST(req: Request) {
 
     const studentName = `${student.firstName} ${student.lastName}`.trim();
     after(() => logHistory({ action: 'check-in', studentId: student.id, name: studentName, details: `entrée validée · IP ${ip}` }));
+    after(() => recordSpecialtyCheckIn(student.classe, student.specialty, studentName, student.scannedAt!));
 
     return NextResponse.json({
       status: 'success',

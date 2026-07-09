@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAllStudents } from "@/lib/rsvpService";
 import { isAdmin } from "@/lib/adminAuth";
+import { GRAD_CLASSES, specialtyLabel } from "@/lib/specialtyGroups";
 
 export const runtime = "nodejs";
-
-// Only graduating classes are called on stage.
-const GRAD_CLASSES = ["L3", "M2"];
 
 // Display order within each classe; anything else found in the sheet is
 // appended afterward, sorted alphabetically.
@@ -13,24 +11,6 @@ const SPECIALTY_ORDER: Record<string, string[]> = {
   L3: ["BI", "BIS", "EBUS", "E-MDS"],
   M2: ["DSSD", "EBUS", "WI"],
 };
-
-const SPECIALTY_LABELS: Record<string, string> = {
-  BC: "BC",
-  BI: "BI",
-  BIS: "BIS",
-  EBUS: "E-Business",
-  "EBUS (en ligne)": "E-Business (en ligne)",
-  "E-MDS": "eMDS",
-  DSSD: "DSSD",
-  WI: "WI",
-  VIC: "VIC",
-  CGBI: "CGBI",
-  Autre: "Autre",
-};
-
-function specialtyLabel(specialty: string): string {
-  return SPECIALTY_LABELS[specialty] || specialty || "Autre";
-}
 
 function formatTime(iso?: string | null): string | undefined {
   if (!iso) return undefined;
