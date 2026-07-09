@@ -217,14 +217,14 @@ export default function AttendancePage() {
             padding: 0 !important;
           }
           .group-sheet {
+            display: block !important;
+            overflow: visible !important;
             background: #fff !important;
             color: #000 !important;
             border: none !important;
             border-radius: 0 !important;
             page-break-after: always;
             break-after: page;
-            break-inside: avoid;
-            min-height: 100vh;
           }
           .group-sheet:last-child {
             page-break-after: auto;
@@ -249,6 +249,7 @@ export default function AttendancePage() {
             color: #000 !important;
             background: none !important;
             border-bottom: 1px solid #ccc;
+            break-inside: avoid;
           }
           .absent-list {
             display: block !important;
@@ -257,6 +258,7 @@ export default function AttendancePage() {
           }
           .absent-list > div {
             color: #000 !important;
+            break-inside: avoid;
           }
           .print-only-heading {
             display: block !important;
